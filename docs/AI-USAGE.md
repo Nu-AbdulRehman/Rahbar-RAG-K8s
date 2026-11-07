@@ -100,6 +100,15 @@
 - **Shaped / Wrote:** what the prod overlay commits as the image tag: a fixed `set-by-cd` value that cd.yml replaces with `${{ github.sha }}` (chosen); rejected committing a real SHA after every merge (a bot commit per deploy, and the tag would name the commit before itself); rejected one overlay per environment variable (`envsubst` on the YAML: a second templating tool beside Kustomize).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s4.7-network-policy
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D2-P4 task list: deny all ingress and egress in rahbar (§4.7); allow DNS to kube-dns on 53 UDP and TCP (§4.7); allow ui from ingress-nginx, api from ingress-nginx and ui (§4.7); allow chroma and redis from api and indexer only (§4.7); allow api and indexer egress to the Ollama host ipBlock and the indexer to nu.edu.pk on 443 (§4.7, Q4); prove ui to chroma fails and api to chroma works, into docs/evidence/ (§4.7).
+- **I changed:** accepted as-is. Pod security (non-root, read-only root, capabilities, no token) was already in the D2-P3 manifests, so this phase is the NetworkPolicy alone.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** how the indexer reaches nu.edu.pk: an ipBlock for its one address 203.124.44.78/32 on 443 (chosen); rejected 0.0.0.0/0 on 443 (opens the whole internet to the only Chroma writer); rejected an egress proxy or Calico's DNS-name policies (a new component, or a Calico-only API that kind's CNI in CI would not apply).
+- **I changed:** accepted as-is. If the university moves the site, the Job fails at the fetch step with a timeout, which is loud, and the fix is one CIDR.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -146,3 +155,4 @@
 - 2026-11-07 · feat/s4.7-container-images · api, indexer and ui Dockerfiles on pinned bases, non-root numeric USER, exec-form CMD; indexer built from the repository root with an allowlist .dockerignore so it carries fetch.py, MANIFEST and the fixtures; all three verified read-only with only /tmp writable (§4.7, §6).
 - 2026-11-07 · feat/s4.1-k8s-base · k8s/base (namespace, ServiceAccounts, ConfigMap, placeholder Secret, chroma StatefulSet, redis Deployment+PVC, api with the §4.3 probes and HPA, ui, indexer Job and CronJob, Ingress) and dev/prod overlays; real index built in-cluster (803 chunks), answers through the Ingress, 20/20 requests 200 while an api pod was deleted (docs/evidence/cluster-proof.txt) (§4.1-§4.3, §4.6).
 - 2026-11-07 · feat/s4.1-k8s-base · ChromaRetriever connects on first use, so a Chroma that is down at boot leaves the api alive and not ready instead of crash-looping; enableServiceLinks: false on every pod after the CHROMA_PORT service-link crash (§4.3).
+- 2026-11-07 · feat/s4.7-network-policy · k8s/base/networkpolicy.yaml: deny by default, then DNS, ui, api, chroma, redis and indexer rules; ui cannot reach chroma or redis, api can, the internet is closed except nu.edu.pk for the indexer; a full re-index and cited answers still work (docs/evidence/networkpolicy-proof.txt) (§4.7).
