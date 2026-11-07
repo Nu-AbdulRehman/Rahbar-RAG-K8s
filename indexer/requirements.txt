@@ -8,6 +8,6 @@ pyyaml==6.0.2
 redis==5.2.1
 # Extraction. OCR also needs the tesseract-ocr system package in the Dockerfile. Pages are
 # rendered with pypdfium2, which pdfplumber already installs, so poppler is not needed.
-pdfplumber==0.11.6
-pypdf==5.4.0
+# 0.11.10 pins pdfminer.six 20260107, past its CVE fixes (section 6). Same 803 chunks.
+pdfplumber==0.11.10
 pytesseract==0.3.13
