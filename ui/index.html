@@ -54,7 +54,9 @@
   button { padding: 0 20px; font: inherit; font-weight: 600; color: #fff; background: var(--accent);
            border: 0; border-radius: 10px; cursor: pointer; }
   button:disabled { opacity: 0.5; cursor: progress; }
-  .hint { max-width: 760px; margin: 6px auto 0; font-size: 12px; color: var(--muted); }
+  .hint { max-width: 760px; margin: 6px auto 0; font-size: 12px; color: var(--muted);
+          display: flex; justify-content: space-between; gap: 8px; }
+  .link { padding: 0; background: none; color: var(--accent); font-size: 12px; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -71,7 +73,10 @@
     <textarea id="question" aria-label="Your question" placeholder="Ask about the documents, e.g. What CGPA puts a student on academic warning?" maxlength="500" required></textarea>
     <button id="send" type="submit">Ask</button>
   </div>
-  <div class="hint">Enter to send, Shift+Enter for a new line. 3 to 500 characters.</div>
+  <div class="hint">
+    <span>Enter to send, Shift+Enter for a new line. 3 to 500 characters.</span>
+    <button id="reset" class="link" type="button">New conversation</button>
+  </div>
 </form>
 
 <script>
@@ -83,6 +88,42 @@ const thread = document.getElementById("thread");
 const form = document.getElementById("ask");
 const input = document.getElementById("question");
 const send = document.getElementById("send");
+const reset = document.getElementById("reset");
+
+// The conversation lives in this browser only (docs/adr/0002). Each turn keeps the
+// question and the answer as shown, never reasoning or retrieved text. The API folds
+// turns that leave the window into `summary` and tells us the window size.
+const STORE = "rahbar.conversation.v1";
+const MAX_ANSWER = 2000;   // MAX_HISTORY_ANSWER in api/app/schemas.py
+const MAX_SUMMARY = 1500;  // MAX_SUMMARY in api/app/schemas.py
+let convo = { turns: [], summary: "", window: 3 };
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || "null");
+    if (saved && Array.isArray(saved.turns)) {
+      // Keep only what the API accepts, so an edited or stale store cannot cause a 422.
+      convo.turns = saved.turns.filter(t => t && typeof t.question === "string"
+        && t.question.length >= 1 && t.question.length <= 500 && typeof t.answer === "string")
+        .map(t => ({ question: t.question, answer: t.answer.slice(0, MAX_ANSWER) }));
+      convo.summary = typeof saved.summary === "string" ? saved.summary.slice(0, MAX_SUMMARY) : "";
+      if (Number.isInteger(saved.window) && saved.window >= 0) convo.window = saved.window;
+    }
+  } catch { /* storage blocked or corrupt: start a fresh conversation */ }
+}
+
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify(convo)); }
+  catch { /* storage blocked: the conversation lasts as long as this page */ }
+}
+
+function remember(question, data) {
+  if (typeof data.history_turns === "number" && data.history_turns >= 0) convo.window = data.history_turns;
+  if (typeof data.summary === "string") convo.summary = data.summary;
+  convo.turns.push({ question, answer: String(data.answer ?? "").slice(0, MAX_ANSWER) });
+  while (convo.turns.length > convo.window) convo.turns.shift();
+  save();
+}
 
 // Model output and retrieved text are untrusted. Everything below is built with
 // textContent and createElement, never innerHTML, so a document or an answer
@@ -169,7 +210,7 @@ async function ask(question) {
     const res = await fetch(`${API_BASE}/api/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, history: convo.turns.slice(-convo.window), summary: convo.summary }),
     });
     let body = null;
     try { body = await res.json(); } catch { /* non-JSON error page */ }
@@ -178,6 +219,7 @@ async function ask(question) {
       thread.append(el("div", { class: "err" }, errorMessage(res.status, body)));
     } else {
       thread.append(renderAnswer(body, res.headers.get("X-Cache")));
+      remember(question, body);
     }
   } catch (err) {
     pending.remove();
@@ -196,6 +238,22 @@ form.addEventListener("submit", (e) => {
   input.value = "";
   ask(q);
 });
+
+reset.addEventListener("click", () => {
+  convo = { turns: [], summary: "", window: convo.window };
+  try { localStorage.removeItem(STORE); } catch { /* nothing stored */ }
+  thread.replaceChildren();
+  input.focus();
+});
+
+// Show the turns still in the window after a reload. Older ones live on in the summary.
+load();
+for (const t of convo.turns) {
+  thread.append(el("div", { class: "q" }, t.question));
+  const card = el("article", { class: "a" });
+  card.append(el("p", { class: "text" }, t.answer));
+  thread.append(card);
+}
 
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
