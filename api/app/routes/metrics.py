@@ -1,7 +1,6 @@
 """Prometheus metrics at /metrics (section 4.8).
 
-Request count and latency are wired up already. Add your own the same way:
-retrieval latency, generation latency, cache hits, abstentions, fallbacks, tokens.
+Labels are bounded: route templates and fixed outcome names, never question text.
 """
 
 from __future__ import annotations
@@ -18,6 +17,9 @@ LATENCY = Histogram(
     ["path"],
     buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60),
 )
+FOLLOWUPS = Counter("rahbar_followups_total", "Questions treated as follow-ups (ADR 0002)")
+SUMMARY_FAILURES = Counter("rahbar_summary_failures_total",
+                           "Conversation summary calls that failed; the old summary was kept")
 
 
 @router.get("/metrics")

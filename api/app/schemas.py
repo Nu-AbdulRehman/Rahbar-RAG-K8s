@@ -13,8 +13,24 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+# Size caps for the browser-held conversation (ADR 0002). The window length itself,
+# HISTORY_TURNS, comes from the ConfigMap and is checked in routes/ask.py.
+MAX_HISTORY_ANSWER = 2000
+MAX_SUMMARY = 1500
+MAX_HISTORY_TURNS = 10      # hard ceiling for the schema; HISTORY_TURNS must not exceed it
+
+
+class Turn(BaseModel):
+    """One earlier exchange, as the browser stored it: never reasoning or retrieved text."""
+
+    question: str = Field(min_length=1, max_length=500)
+    answer: str = Field(max_length=MAX_HISTORY_ANSWER)
+
+
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=500)
+    history: list[Turn] = Field(default_factory=list, max_length=MAX_HISTORY_TURNS)
+    summary: str = Field(default="", max_length=MAX_SUMMARY)
 
 
 class Passage(BaseModel):
@@ -62,3 +78,12 @@ class AskResponse(BaseModel):
     confidence: Literal["high", "medium", "low"]
     retrieved: list[RetrievedRef]
     provider: str
+    # ADR 0002: the conversation summary to send back next time, and the window size.
+    summary: str = ""
+    history_turns: int = 3
+
+
+class Summary(BaseModel):
+    """The model's output when it folds an old turn into the conversation summary."""
+
+    summary: str
