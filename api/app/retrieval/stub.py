@@ -45,5 +45,9 @@ class StubRetriever:
     def count(self) -> int:
         return len(_PASSAGES)
 
+    def pin(self) -> None:
+        """No index behind the stub, so no embedding pin to compare (section 4.4)."""
+        return None
+
     def retrieve(self, question: str, k: int, include_superseded: bool = False) -> list[Passage]:
         return [p.model_copy() for p in _PASSAGES[:k]]

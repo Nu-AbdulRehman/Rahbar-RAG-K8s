@@ -44,6 +44,10 @@ class ChromaRetriever:
     def count(self) -> int:
         return int(self.collection().count())
 
+    def pin(self) -> dict[str, Any]:
+        """What the indexer recorded on the collection (pin_metadata in store.py)."""
+        return dict(self.collection().metadata or {})
+
     def retrieve(self, question: str, k: int, include_superseded: bool = False) -> list[Passage]:
         vector = self.embedder.embed(question)          # the pinned EMBED_MODEL
         where = None if include_superseded else {"superseded": False}
