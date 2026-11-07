@@ -10,7 +10,8 @@ def get_retriever(settings: Settings) -> Retriever:
 
         return StubRetriever()
     if settings.retriever == "chroma":
+        from ..providers.llm.embed import OllamaEmbedder
         from .chroma import ChromaRetriever
 
-        return ChromaRetriever(settings)
+        return ChromaRetriever(settings, OllamaEmbedder(settings))
     raise ValueError(f"unknown RETRIEVER {settings.retriever!r}; expected stub or chroma")

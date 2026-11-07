@@ -25,6 +25,15 @@
 - **Shaped / Wrote:** OCR engine (D12), PDF extraction library (D13), chunk unit (D14), re-index strategy (D15).
 - **I changed:** accepted as-is. pdf2image was dropped from indexer/requirements.txt because nothing uses it.
 
+## 2026-11-07 · feat/s3.4-grounded-generation
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D1-P4 task list: retrieve read-only from Chroma with the superseded filter (§3.2); abstain below the relevance floor (§3.4); define the provider interface with Ollama and hosted (§3.5); build the augmented prompt (§3.2); validate, retry once, fall back (§3.4); drop unretrieved citations (§3.4); write the never-skipped tests (§3.4).
+- **I changed:** accepted as-is.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** older-version detection (D17), provider interface (D18).
+- **I changed:** accepted as-is. The relevance floor default is recorded as ASSUMED (D19) until it is measured.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -41,3 +50,5 @@
 - 2026-11-07 · feat/s3.1-indexer · Implemented store: the only Chroma writer, upsert then prune, rebuild on a pin change, writes embed_model and dimension; tested with a fake client and by hand against chromadb 1.0.12 (§3.1, §4.4).
 - 2026-11-07 · feat/s3.1-indexer · Added cache invalidation as the last step of every run (Redis INCR on rahbar:cache:generation, the Job fails if Redis is down), storage amplification in the run log, and an end-to-end run test on the fixtures (§3.3, §3.1).
 - 2026-11-07 · feat/s3.1-indexer · Corpus delivery (Q4): fetch.py --out DIR for the Job's emptyDir and --verify --out DIR against the committed MANIFEST; 2023 rules URL moved to https; PIPELINE.md extraction, cleaning, chunking and embedding sections (§2, §3.1).
+- 2026-11-07 · feat/s3.4-grounded-generation · ChromaRetriever: question embedded with EMBED_MODEL, top-k, superseded excluded unless asked for, cosine similarity scores, never writes (§3.2).
+- 2026-11-07 · feat/s3.4-grounded-generation · Providers (stub, ollama with format=schema, hosted with response_format), augmented prompt with delimited evidence, relevance-floor abstention, one retry then canned answer, citation check, and 23 stub-only tests each shown to fail with its guard removed (§3.4, §3.5).

@@ -10,6 +10,7 @@ from ..schemas import Passage
 class Retriever(Protocol):
     name: str
 
-    def retrieve(self, question: str, k: int) -> list[Passage]:
-        """Return up to k passages, best first."""
+    def retrieve(self, question: str, k: int, include_superseded: bool = False) -> list[Passage]:
+        """Return up to k passages, best first. Superseded documents are left out unless
+        include_superseded is True (section 3.2 step 4)."""
         ...
