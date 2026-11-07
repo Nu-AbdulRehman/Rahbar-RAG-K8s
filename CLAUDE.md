@@ -163,6 +163,17 @@ how clean the code looks.
     fixed. AI assistance is still disclosed, but only in `docs/AI-USAGE.md` (§6, §8), never
     in git metadata.
 
+    **Which account does which work.** Dev 1's work (the RAG pipeline and eval: `indexer/`,
+    `api/app/{retrieval,providers,services}`, `eval/`, `corpus/`, plus Dev 1's swap task,
+    the `e2e-eval` CI job) is committed, pushed, opened as PRs and reviewed as
+    **Nu-AbdulRehman**. Dev 2's work (the platform: Dockerfiles, `k8s/`,
+    `.github/workflows/`, Makefile additions, plus Dev 2's swap task, the embedding-pin
+    guard) is committed, pushed, opened as PRs and reviewed as **MTH99910**. A review of a
+    Dev 1 PR comes from MTH99910, and a review of a Dev 2 PR comes from Nu-AbdulRehman.
+    Before every commit, push, PR or review, check `git config user.name` and the `gh` /
+    credential account against the owner of the work. If they don't match, stop and ask
+    the user to switch accounts. Never switch them yourself.
+
 ## 2. The deduction ledger — costs more than most features are worth
 
 These twelve automatic deductions from brief §8 total **−107 marks**. Avoiding a deduction is

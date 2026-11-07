@@ -160,6 +160,10 @@ chroma 8000 (heartbeat `GET /api/v2/heartbeat`, data in `/data`), redis 6379.
   with Claude Code" lines to commits, PRs, or comments. If the identity is missing or
   looks like a bot, stop and ask. AI use is disclosed only in `docs/AI-USAGE.md`. Full
   rule: `CLAUDE.md` §1.23.
+- **Accounts:** Dev 1's work (pipeline, eval, the `e2e-eval` job) goes through
+  Nu-AbdulRehman. Dev 2's work (Dockerfiles, `k8s/`, workflows, the embedding-pin guard)
+  goes through MTH99910: commits, PRs and reviews. Each account reviews the other dev's
+  PRs. If the configured account doesn't match the owner of the work, stop and ask.
 - **Ownership:** Dev 1 owns the RAG pipeline and eval, Dev 2 owns the platform
   (Dockerfiles, `k8s/`, workflows). Each partner does one real task in the other's area.
 - **Handover:** a session that ends with an unmerged branch leaves
