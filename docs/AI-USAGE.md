@@ -72,6 +72,11 @@
 - **Shaped / Wrote:** audit fix list: strip whitespace before the 3-500 check (§3.2); keep each request under the Ingress timeout (§3.4); move SERVE_UI_DIR and HOSTNAME into the config modules (CLAUDE.md §3); refuse TEMPERATURE outside 0-0.3 (§3.4); delete the merged branches' handover file (AGENTS.md).
 - **I changed:** accepted as-is. Gap 5 (cache ignores the old-version flag) was left out because the user chose 1-4 and 6; it is measured as safe at 0.96.
 
+## 2026-11-07 · fix/s3.3-cache-old-versions
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** gap 5 task list: decide the old-version flag before the cache check (§3.2); skip the lookup for old-version questions (§3.3); never store their answers (§3.3); test that a same-worded old-version question neither hits nor is stored (§3.3).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -108,3 +113,4 @@
 - 2026-11-07 · fix/s3.4-audit-gaps · Whitespace-only questions are now a 422, TEMPERATURE outside 0-0.3 refuses startup, and SERVE_UI_DIR and HOSTNAME are read only in the config modules; tests in api/tests/test_validation.py, each shown to fail without its fix (§3.2, §3.4).
 - 2026-11-07 · fix/s3.4-audit-gaps · REQUEST_BUDGET_SECONDS (50) caps each /api/ask below the nginx Ingress 60 s read timeout: each model call gets only the time left, the retry and the summary are skipped when under 1 s remains; tests in api/tests/test_budget.py with a fake clock (§3.4).
 - 2026-11-07 · fix/s3.4-audit-gaps · Deleted the handover file of the merged Dev 1 stack (AGENTS.md: delete at merge) after moving the ConfigMap values, the indexer image and the egress needs into docs/PIPELINE.md, "Configuration for the cluster" (§4.1).
+- 2026-11-07 · fix/s3.3-cache-old-versions · Questions that ask about an older version now bypass the semantic cache in both directions, like follow-ups, so a current answer is never served for "the 2023 rules" or the other way round (api/app/services/answer.py, test in api/tests/test_cache.py) (§3.3).
