@@ -113,5 +113,5 @@ Three images, all on pinned bases: `rahbar-api` and `rahbar-indexer` on
 python:3.12.16-slim, `rahbar-ui` on nginxinc/nginx-unprivileged:1.30.6-alpine, plus
 chromadb/chroma:1.0.12 and redis:7.4.2. Locally `make images` builds them as `:dev` and
 loads them into minikube. On a push to main, cd.yml pushes them to Docker Hub as
-`docker.io/mth99910/rahbar-*:<commit SHA>` and deploys that SHA to a kind cluster, so the
+`docker.io/nuabdulrehman/rahbar-*:<commit SHA>` and deploys that SHA to a kind cluster, so the
 answer to "what is running?" is one commit id.

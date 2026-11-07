@@ -6,6 +6,6 @@ kind: Kustomization
 resources:
   - ../../base
 images:
-  - {name: rahbar-api, newName: docker.io/mth99910/rahbar-api, newTag: set-by-cd}
-  - {name: rahbar-indexer, newName: docker.io/mth99910/rahbar-indexer, newTag: set-by-cd}
-  - {name: rahbar-ui, newName: docker.io/mth99910/rahbar-ui, newTag: set-by-cd}
+  - {name: rahbar-api, newName: docker.io/nuabdulrehman/rahbar-api, newTag: set-by-cd}
+  - {name: rahbar-indexer, newName: docker.io/nuabdulrehman/rahbar-indexer, newTag: set-by-cd}
+  - {name: rahbar-ui, newName: docker.io/nuabdulrehman/rahbar-ui, newTag: set-by-cd}

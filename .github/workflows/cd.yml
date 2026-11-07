@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false            # never cancel a deploy half way
 
 env:
-  REGISTRY: docker.io/mth99910
+  REGISTRY: docker.io/nuabdulrehman
   INGRESS_NGINX_VERSION: "controller-v1.12.1"
 
 jobs:
