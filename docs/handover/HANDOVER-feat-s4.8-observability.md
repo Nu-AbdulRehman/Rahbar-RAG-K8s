@@ -1,7 +1,7 @@
 # Handover: Dev 1 branches, 2026-11-07
 
 ## Position
-Dev 1 phases D1-P1 to D1-P6 are committed locally on seven stacked branches. Each one
+Dev 1 phases D1-P1 to D1-P8 are committed locally on nine stacked branches. Each one
 starts from the previous one, and none is pushed or merged yet:
 
 ```
@@ -12,7 +12,9 @@ dev
           └ feat/s3.4-grounded-generation   D1-P4 retrieval, providers, abstention, retry, citations
              └ feat/s3.2-conversation-history   D1-P4b ADR 0002, history API, UI, follow-ups
                 └ feat/s3.3-semantic-cache       D1-P5 ADR 0003, Redis cache, /readyz
-                   └ feat/s4.8-observability     D1-P6 metrics and log line (this branch)
+                   └ feat/s4.8-observability     D1-P6 metrics and log line
+                      └ feat/s5.2-measure-and-tune   D1-P7 measured chunking, floor, cache, baselines
+                         └ feat/s5.5-failure-analysis   D1-P8 FAILURE-ANALYSIS, notes Q5/Q6
 ```
 
 Open the PRs into `dev` in that order. Run the pre-PR hardening review on each diff first
@@ -26,15 +28,15 @@ Open the PRs into `dev` in that order. Run the pre-PR hardening review on each d
   into the real one, a re-run is safe, stale chunks are pruned, and `where={"superseded": False}`
   works.
 
+## Done since the first handover (Ollama installed on this laptop)
+- **D1-P7:** six chunk configs measured and 150/30 shipped; RELEVANCE_FLOOR 0.65 and
+  CACHE_THRESHOLD 0.96 chosen with data; eval/results.json, eval/baseline.json and
+  eval/fixtures/baseline.fixture.json committed (docs/PIPELINE.md). Measured on the laptop
+  (local chromadb 1.0.12, Ollama 0.40.15), not on minikube.
+- **D1-P8:** FAILURE-ANALYSIS.md (stages A, B, C, E) and ENGINEERING-NOTES Q5/Q6. Q6 gets the
+  guard's file:line once Dev 2's check lands.
+
 ## Half-done or blocked
-- **Fixture baseline** (`eval/fixtures/baseline.fixture.json`): needs real embeddings
-  (nomic-embed-text). Ollama is not installed on this machine. Create it from the first
-  green e2e-eval run, or locally once Ollama is running. Never take it from the stub.
-- **D1-P7 measurements** (three chunk configs, the relevance floor, the cache threshold,
-  eval/baseline.json): need Ollama and the cluster. `RELEVANCE_FLOOR=0.5` and
-  `CACHE_THRESHOLD=0.95` in api/app/config.py are make-dev placeholders (DECISIONS D19).
-- **D1-P8** (FAILURE-ANALYSIS.md, ENGINEERING-NOTES Q5/Q6): wait on the P7 numbers and the pin
-  guard.
 - **e2e-eval CI job** (Dev 1's swap task): waits on Dev 2's Dockerfiles, manifests and ci.yml.
 - **UI**: script syntax checked with node, but nobody has clicked through it in a browser yet.
 
@@ -43,6 +45,19 @@ Open the PRs into `dev` in that order. Run the pre-PR hardening review on each d
   `dimension` into the collection metadata (D16, ASSUMED: please confirm). Left for you: the
   startup comparison in `api/app/main.py` (STARTER-TODO 4.4) and a `pin` entry in
   `api/app/routes/health.py` `readyz`, which already returns 503 naming Chroma or Redis.
+- **ConfigMap values, with their source comments** (P7 handoff):
+  ```yaml
+  CHUNK_SIZE: "150"          # words; best recall@5 of 6 configs, docs/PIPELINE.md "Chunking"
+  CHUNK_OVERLAP: "30"        # words; same table
+  TOP_K: "5"                 # top_k 1 drops recall@5 from 0.938 to 0.656 (FAILURE-ANALYSIS C)
+  RELEVANCE_FLOOR: "0.65"    # between must-abstain max 0.600 and answerable min 0.695, PIPELINE.md
+  CACHE: "redis"
+  CACHE_THRESHOLD: "0.96"    # lowest with zero false hits; 0.95 hit "15 days" on "30 days"
+  TEMPERATURE: "0.2"         # facts and JSON need 0-0.3; 0.2 kept 0 invalid replies in 22 (PIPELINE.md)
+  EMBED_MODEL: "nomic-embed-text"   # D2; the pin, read by api and indexer
+  LLM_MODEL: "llama3.2:3b"          # D1
+  LLM_TIMEOUT_SECONDS: "120"        # a cold model load took >120 s once; the retry covers it (failure-log)
+  ```
 - **New ConfigMap keys** (every one needs a source comment): `RELEVANCE_FLOOR`,
   `CACHE=redis`, `CACHE_THRESHOLD`, `CACHE_MAX_ENTRIES`, `REDIS_HOST`, `REDIS_PORT`,
   `REDIS_TIMEOUT_SECONDS`, `HISTORY_TURNS`, `LLM_TIMEOUT_SECONDS`, `EMBED_TIMEOUT_SECONDS`
@@ -65,6 +80,10 @@ git switch feat/s2-corpus && git diff dev --stat     # start the pre-PR review o
 ```
 
 ## What will bite
+- On the CI fixtures, f06 scores 0.660 against the 0.65 floor. If e2e-eval ever fails on
+  f06, check that number first (docs/PIPELINE.md, "Relevance floor").
+- Warm llama3.2:3b on the host before demos: the first call after a load can exceed the
+  timeout (docs/failure-log.md).
 - This machine has no `make`. Use `.venv/Scripts/<tool>` directly. tesseract lives in
   `C:\Program Files\Tesseract-OCR`, so put it on PATH before running OCR.
 - The root `CLAUDE.md` and `AGENTS.md` (moved from docs/ in the working tree, not committed)

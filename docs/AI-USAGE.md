@@ -62,6 +62,11 @@
 - **Shaped / Wrote:** D1-P7 task list: install Ollama with nomic-embed-text and llama3.2:3b (user approved) (§3.5); measure at least three chunk configs for recall@5 (§3.1); choose the relevance floor from the abstain and answerable scores (§3.4); choose the lowest cache threshold with zero false hits (§3.3); write the real and fixture baselines (§5.4); hand the ConfigMap values over with their sources (§4.1).
 - **I changed:** accepted as-is. Measured on this laptop (local chromadb 1.0.12 and Ollama on the GPU), not on minikube, because the cluster is Dev 2's and not up yet; the values carry over because the models and the code are the same.
 
+## 2026-11-07 · feat/s5.5-failure-analysis
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D1-P8 task list: break and measure stages A, B, C and E one at a time (§5.5); write FAILURE-ANALYSIS.md with symptom, diagnosis, stage and remedy (§5.5); finish the PIPELINE.md stage report (§3.1); answer engineering notes Q5 and Q6 with file:line references (§7).
+- **I changed:** accepted as-is. Stage B's expected recall drop did not happen, and the write-up says so rather than forcing the narrative.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -92,3 +97,6 @@
 - 2026-11-07 · feat/s5.2-measure-and-tune · Measured six (CHUNK_SIZE, CHUNK_OVERLAP) configs on the real corpus and shipped 150/30 (recall@5 0.938); table in PIPELINE.md, raw numbers in docs/evidence/tuning-chunks.json (§3.1).
 - 2026-11-07 · feat/s5.2-measure-and-tune · Chose RELEVANCE_FLOOR 0.65 from the abstain and answerable score gap, and CACHE_THRESHOLD 0.96 as the lowest with zero false hits on eval/cache_pairs.yaml (0.95 failed on 15 against 30 days); evidence in docs/evidence/relevance-floor.txt and cache-threshold.txt (§3.4, §3.3).
 - 2026-11-07 · feat/s5.2-measure-and-tune · First baselines: eval/results.json and eval/baseline.json from llama3.2:3b on the real index (recall@5 0.938, citation validity 1.00, abstention 1.00), and eval/fixtures/baseline.fixture.json taken the way CI runs (stub LLM, real embeddings) (§5.4).
+- 2026-11-07 · feat/s5.5-failure-analysis · FAILURE-ANALYSIS.md: no-OCR index (23 chunks lost, a wrong document clears the floor at 0.680), 100/0 chunks (no recall drop, explained by heading-prefixed chunks), top_k 1 (0.938 to 0.656) and an api-only model change (768 against 384 dimensions, every answer canned), and no superseded filter (2023 outranks 2026 on q11 by 0.001) (§5.5).
+- 2026-11-07 · feat/s5.5-failure-analysis · ENGINEERING-NOTES Q5 (exact-term recall 0.667 from q13 "clause 1.21"; hybrid BM25 as the lecture fix) and Q6 (api-only model change measured: canned answers while /readyz stays ready; what the pin guard changes) (§7).
+- 2026-11-07 · feat/s5.5-failure-analysis · Pre-PR hardening review of all nine branches (findings and WONTFIX reasons are in each PR body). Fixed the one real gap it found: a listed document that yields zero chunks now fails the indexer run (indexer/pipeline/run.py), with a test (§6, §3.1).

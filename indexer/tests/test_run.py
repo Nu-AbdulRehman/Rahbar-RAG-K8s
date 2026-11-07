@@ -43,6 +43,16 @@ def test_full_run_stores_fixture_chunks_then_invalidates_the_cache(
     assert sources == {"academic-rules-2023.md", "academic-rules-2026.md", "fees-2026.md"}
 
 
+def test_a_document_with_no_chunks_fails_the_run(tmp_path: Path,
+                                                 monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "rules.md").write_text("# 1. Rules\nStudents attend.", encoding="utf-8")
+    (tmp_path / "blank.md").write_text("", encoding="utf-8")       # e.g. a scan without OCR
+    monkeypatch.setenv("CORPUS_DIR", str(tmp_path))
+    monkeypatch.setattr("sys.argv", ["pipeline.run"])
+    with pytest.raises(SystemExit, match="blank.md produced no chunks"):
+        run.main()
+
+
 def test_a_redis_failure_fails_the_run(monkeypatch: pytest.MonkeyPatch) -> None:
     def down(settings: Any) -> int:
         raise ConnectionError("redis unreachable")

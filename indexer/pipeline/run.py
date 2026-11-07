@@ -82,6 +82,10 @@ def run_pipeline(settings: IndexerSettings) -> int:
         original_words += sum(len(p.text.split()) for p in doc.pages)
         log("chunked", source=path.name, chunks=len(pieces),
             ocr_pages=sum(p.ocr for p in doc.pages))
+        if not pieces:
+            # A listed document that yields nothing is a lost scan or a broken extract
+            # (FAILURE-ANALYSIS.md, stage A). Fail the Job instead of silently shrinking.
+            raise SystemExit(f"{path.name} produced no chunks; refusing to index without it")
         all_chunks.extend(pieces)
     stored_words = sum(len(c.text.split()) for c in all_chunks)
     log("chunking done", chunks=len(all_chunks), chunk_size=settings.chunk_size,
