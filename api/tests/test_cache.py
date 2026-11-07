@@ -224,3 +224,16 @@ def test_liveness_ignores_every_dependency(client: TestClient) -> None:
     client.app.state.retriever = Broken()  # type: ignore[attr-defined]
     assert client.get("/readyz").status_code == 503
     assert client.get("/healthz").status_code == 200
+
+
+def test_old_version_questions_skip_the_cache_both_ways(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    cache, redis = _setup()
+    old_q = "How much was refunded in 15 days under the 2023 rules?"
+    # Embedded exactly like the current question, so only the bypass keeps it a miss.
+    monkeypatch.setitem(Embedder.VECTORS, old_q, [1.0, 0.0, 0.0])
+    provider = Provider()
+    _ask(cache, "How much is refunded in 15 days?", provider)                   # stored
+    old = _ask(cache, old_q, provider)
+    assert old.cached is False and provider.calls == 2          # no lookup: no hit
+    assert len(redis.data["rahbar:cache:entries:0"]) == 1       # and not stored

@@ -54,9 +54,13 @@ def answer_question(
     log.debug("conversation", extra={"history": [t.model_dump() for t in history],
                                      "summary": summary, "retrieval_query": query})
 
-    # Follow-ups skip the cache both ways: their meaning depends on the conversation.
-    # Standalone questions are keyed on the question alone, never on history (ADR 0002).
-    if follow_up or not cache.enabled:
+    include_old = asks_about_older_version(query)
+    # The cache is skipped both ways for follow-ups (their meaning depends on the
+    # conversation) and for questions about an older version: cache entries are matched
+    # on wording alone, and "the 2023 rules" and the current rules can be worded the
+    # same. Standalone questions are keyed on the question alone, never on history.
+    bypass = follow_up or include_old
+    if bypass or not cache.enabled:
         metrics.record_cache_lookup("skipped")
     else:
         hit, similarity = cache.lookup(question)
@@ -64,7 +68,6 @@ def answer_question(
         if hit:
             return _cached(hit, similarity, provider, summary, history, settings, deadline)
 
-    include_old = asks_about_older_version(query)
     abstained = False
     started = time.perf_counter()
     try:
@@ -98,9 +101,10 @@ def answer_question(
         metrics.SUMMARY_FAILURES.inc()
 
     answer = result.answer
-    # Never cache a follow-up, an abstention, an out-of-scope answer, a fallback, or
-    # anything without a valid citation: a cached mistake is served to everyone (3.3).
-    safe = (not follow_up and not abstained and not result.fallback
+    # Never cache a follow-up, an old-version question, an abstention, an out-of-scope
+    # answer, a fallback, or anything without a valid citation: a cached mistake is
+    # served to everyone (3.3).
+    safe = (not bypass and not abstained and not result.fallback
             and answer.answered_from_context and bool(answer.citations))
     response = AskResponse(
         request_id=request_id_var.get(),

@@ -24,7 +24,9 @@ only by the api and the indexer.
 - **Invalidation:** the indexer's last step is `INCR rahbar:cache:generation`
   (indexer/pipeline/invalidate.py). The api reads the generation on every lookup, so the
   next question after a re-index misses. Old lists expire after seven days.
-- **Never cached:** follow-ups, abstentions, `answered_from_context: false`, the canned
+- **Never cached, and never looked up:** follow-ups and questions about an older version
+  (entries match on wording alone, so "the 2023 rules" could hit a current answer).
+- **Never cached:** abstentions, `answered_from_context: false`, the canned
   fallback, and any answer left without a valid citation.
 - **Failure:** every Redis error is a cache miss with a 0.5 s timeout, never a 500. `/readyz`
   still reports Redis as a dependency (§4.3). `CACHE=none` turns the cache off for

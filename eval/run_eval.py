@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -94,6 +95,26 @@ def _mean(values: list[float | None]) -> float | None:
     return round(sum(scored) / len(scored), 4) if scored else None
 
 
+NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
+
+
+def expect_found(expect: str | None, response: dict) -> float | None:
+    """1.0 when an answered response matches the golden `expect` string, 0.0 when it does
+    not or was declined, None when there is no expect string. If `expect` has numbers
+    ("2 semesters", "12,000", "8-week"), every one must appear in the answer, because a
+    terse "2" is right; otherwise the whole string must appear, case-insensitively.
+    A rough check: it catches a declined or wrong answer, not a subtly wrong one."""
+    if not expect:
+        return None
+    answer = str(response.get("answer", ""))
+    if not response.get("answered_from_context"):
+        return 0.0
+    wanted = NUMBER.findall(expect)
+    if wanted:
+        return 1.0 if set(wanted) <= set(NUMBER.findall(answer)) else 0.0
+    return 1.0 if expect.lower() in answer.lower() else 0.0
+
+
 def summarise(rows: list[dict]) -> dict:
     """Overall recall@3, recall@5, citation validity and abstention correctness, plus
     recall@5 broken down by question type. This dict becomes results.json."""
@@ -111,6 +132,7 @@ def summarise(rows: list[dict]) -> dict:
             "citation_validity": ok / total if total else None,
             "answered_from_context": bool(response.get("answered_from_context")),
             "cached": bool(response.get("cached", False)),
+            "expect_found": expect_found(row.get("expect"), response),
             "seconds": row.get("seconds"),
         })
     gated = [q for q in per_question if q["type"] not in UNGATED_TYPES]
@@ -130,6 +152,8 @@ def summarise(rows: list[dict]) -> dict:
         "abstention_correctness": round(
             sum(not q["answered_from_context"] for q in abstain) / len(abstain), 4)
         if abstain else None,
+        # Reported, never gated (§5.3): the answer is not deterministic, the retrieval is.
+        "answer_correctness": _mean([q["expect_found"] for q in gated]),
         "by_type": by_type,
         "per_question": per_question,
     }
