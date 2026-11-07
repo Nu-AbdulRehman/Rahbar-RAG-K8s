@@ -77,6 +77,11 @@
 - **Shaped / Wrote:** gap 5 task list: decide the old-version flag before the cache check (§3.2); skip the lookup for old-version questions (§3.3); never store their answers (§3.3); test that a same-worded old-version question neither hits nor is stored (§3.3).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s3.4-brief-gaps
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** brief-audit task list: document chunk count and metadata schema (§3.1); require inline [source / section] markers and check them against what was retrieved (§3.4); index the planted injection through the real pipeline in a test (§3.4); report answer correctness outside the gate (§5.3); draft Dev 1 input for README and ADRs 0001 and 0004 (§2, §3.5, §4.2).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -114,3 +119,4 @@
 - 2026-11-07 · fix/s3.4-audit-gaps · REQUEST_BUDGET_SECONDS (50) caps each /api/ask below the nginx Ingress 60 s read timeout: each model call gets only the time left, the retry and the summary are skipped when under 1 s remains; tests in api/tests/test_budget.py with a fake clock (§3.4).
 - 2026-11-07 · fix/s3.4-audit-gaps · Deleted the handover file of the merged Dev 1 stack (AGENTS.md: delete at merge) after moving the ConfigMap values, the indexer image and the egress needs into docs/PIPELINE.md, "Configuration for the cluster" (§4.1).
 - 2026-11-07 · fix/s3.3-cache-old-versions · Questions that ask about an older version now bypass the semantic cache in both directions, like follow-ups, so a current answer is never served for "the 2023 rules" or the other way round (api/app/services/answer.py, test in api/tests/test_cache.py) (§3.3).
+- 2026-11-07 · feat/s3.4-brief-gaps · PIPELINE.md gains a Store section: 803 chunks by document, the per-chunk metadata schema and the collection metadata, plus how the api checks the pin today (§3.1).

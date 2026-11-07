@@ -72,6 +72,39 @@ What the table says: the large chunks lose q03 ("passed its prerequisite") and q
 
 Model `EMBED_MODEL` from the ConfigMap (nomic-embed-text, decision D2), through Ollama's `POST /api/embed` in batches of `EMBED_BATCH_SIZE`. Vector dimension 768, as nomic-embed-text returns it; nothing in the code names a model or a dimension. `store.py` writes `embed_model` and `dimension` into the collection metadata (D16). A model or dimension change rebuilds the collection; an ordinary re-index upserts and prunes (D15), so the API never sees an empty collection.
 
+How the api checks the pin: the startup comparison and the `/readyz` refusal are Dev 2's swap task, not built yet. Until then, a mismatch in dimension surfaces as `InvalidArgumentError` on every query and the canned answer (FAILURE-ANALYSIS.md, stage C).
+
+## Store
+
+`indexer/pipeline/store.py` is the only code that writes to Chroma. It writes one collection, `CHROMA_COLLECTION` (default `rahbar`). The last run, on 2026-11-07 at 150/30, stored **803 chunks**:
+
+| Document | doc_version | Superseded | Pages | OCR'd pages | Chunks |
+| --- | --- | --- | --- | --- | --- |
+| `undergraduate-academic-rules-aug-2023.pdf` | 2023-08 | yes | 26 | 24 | 55 |
+| `academic-rules-handbook-jun-2026.pdf` | 2026-06 | no | 58 | 5 | 99 |
+| `prospectus-2026-academic-rules-and-regulations.pdf` | 2026 | no | 5 | 0 | 36 |
+| `student-handbook-jun-2026.pdf` | 2026-06 | no | 64 | 4 | 117 |
+| `annual-report-2019-20.pdf` | 2019-20 | no | 33 | 0 | 95 |
+| `annual-report-2023-24.pdf` | 2023-24 | no | 85 | 0 | 357 |
+| `fee-structure-page.html` | 2026-27 | no | 1 | 0 | 10 |
+| `grading-page.html` | 2026 | no | 1 | 0 | 11 |
+| `faculty-entrepreneurship-and-technical-start-ups-policy.pdf` | 2022-05 | no | 8 | 8 | 23 |
+
+**Per chunk** (`indexer/pipeline/models.py`, `Chunk`):
+
+| Field | Type | Example | Used for |
+| --- | --- | --- | --- |
+| id | str | `academic-rules-handbook-jun-2026.pdf#0012` | Stable: same document and position, same id, so a re-index upserts in place |
+| document | str | `Attendance Requirements\n1.21 Students are required ...` | The text, with its section heading as the first line |
+| embedding | list[float] | 768 floats | Similarity search |
+| source | str (metadata) | `academic-rules-handbook-jun-2026.pdf` | Citations, recall matching |
+| section | str (metadata) | `Attendance Requirements` | Citations, recall matching |
+| page | int (metadata) | `10` | Citations (PDF page, 1-based; 1 for HTML and Markdown) |
+| doc_version | str (metadata) | `2026-06` | Telling versions apart |
+| superseded | bool (metadata) | `false` | The default `where={"superseded": False}` filter |
+
+**Per collection:** `hnsw:space: cosine` (so the api's score is 1 - distance), `embed_model` and `dimension`, the embedding pin.
+
 ## Relevance floor
 
 The top similarity of every golden question on the shipped 150/30 index (`docs/evidence/relevance-floor.txt`): the four must-abstain questions (hostel rules, plus the injection that asks about them) top out at **0.600**, and the lowest answerable question scores **0.695** (q06, B+ grade points).
