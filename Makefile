@@ -11,6 +11,8 @@ BIN := $(abspath $(VENV))/bin
 # docker driver, run `minikube tunnel` in another terminal and use INGRESS_IP=127.0.0.1.
 INGRESS_IP ?= $(shell minikube ip 2>/dev/null)
 HOST ?= rahbar.local
+# The brief asks for 6 GB. Docker Desktop caps its VM lower on some laptops (failure-log).
+MINIKUBE_MEMORY ?= 6144
 
 .DEFAULT_GOAL := help
 .PHONY: help install test lint dev cluster images apply secret index ask fetch eval eval-fixtures check
@@ -37,7 +39,7 @@ dev: ## run the API with stubs on http://localhost:8000, serving the chat UI too
 	cd api && SERVE_UI_DIR=../ui RETRIEVER=stub LLM_PROVIDER=stub $(BIN)/uvicorn app.main:app --reload --port 8000
 
 cluster: ## start minikube with Calico, then enable metrics-server and ingress
-	minikube start --driver=docker --cni=calico --memory=6144 --cpus=4
+	minikube start --driver=docker --cni=calico --memory=$(MINIKUBE_MEMORY) --cpus=4
 	minikube addons enable metrics-server
 	minikube addons enable ingress
 

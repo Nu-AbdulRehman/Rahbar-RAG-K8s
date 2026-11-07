@@ -1,0 +1,47 @@
+# D2-P3 proof: the full stack on minikube with the real index (RETRIEVER=chroma, LLM_PROVIDER=ollama-host), 2026-11-07T14:16:57Z, minikube v1.39.0, k8s v1.37.0
+## kubectl get pods,svc,ingress,pvc,hpa -n rahbar
+NAME                         READY   STATUS      RESTARTS   AGE
+pod/api-85b49795c4-59c4m     1/1     Running     0          2m26s
+pod/api-85b49795c4-8hczb     1/1     Running     0          2m20s
+pod/api-85b49795c4-n7tv5     1/1     Running     0          6m39s
+pod/chroma-0                 1/1     Running     0          6m37s
+pod/indexer-7m7dk            0/1     Completed   0          6m30s
+pod/redis-6579f795f5-7f4qm   1/1     Running     0          6m37s
+pod/ui-7c459ff78f-84htc      1/1     Running     0          6m43s
+
+NAME             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/api      ClusterIP   10.111.210.235   <none>        8000/TCP   11m
+service/chroma   ClusterIP   10.106.193.222   <none>        8000/TCP   11m
+service/redis    ClusterIP   10.96.153.41     <none>        6379/TCP   11m
+service/ui       ClusterIP   10.102.49.9      <none>        8080/TCP   11m
+
+NAME                               CLASS   HOSTS          ADDRESS        PORTS   AGE
+ingress.networking.k8s.io/rahbar   nginx   rahbar.local   192.168.49.2   80      11m
+
+NAME                                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-chroma-0   Bound    pvc-4a6cb8ee-de79-48e4-b74f-55bd25c2b806   2Gi        RWO            standard       <unset>                 11m
+persistentvolumeclaim/redis-data      Bound    pvc-12a0d132-9320-441e-b404-74ee06f79819   1Gi        RWO            standard       <unset>                 11m
+
+NAME                                      REFERENCE        TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/api   Deployment/api   cpu: 4%/70%   3         8         3          11m
+
+## indexer Job log (last lines)
+{"ts": "2026-11-07T14:14:05Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "faculty-entrepreneurship-and-technical-start-ups-policy.pdf", "chunks": 23, "ocr_pages": 8}
+{"ts": "2026-11-07T14:14:05Z", "logger": "rahbar.indexer", "msg": "chunking done", "chunks": 803, "chunk_size": 150, "chunk_overlap": 30, "storage_amplification": 1.122}
+{"ts": "2026-11-07T14:14:24Z", "logger": "rahbar.indexer", "msg": "indexer finished", "chunks": 803, "cache_generation": 1, "seconds": 189.2}
+
+## ask through the Ingress (Host: rahbar.local)
+{'answer': '2.00 [academic-rules-handbook-jun-2026.pdf / Academic Warning/Probation]', 'citations': [{'source': 'academic-rules-handbook-jun-2026.pdf', 'section': 'Academic Warning/Probation', 'page': 24}], 'answered_from_context': True, 'provider': 'ollama'}
+
+## delete one api pod while asking 20 times
+deleting pod/api-85b49795c4-59c4m
+pod "api-85b49795c4-59c4m" deleted from rahbar namespace
+200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 
+Waiting for deployment "api" rollout to finish: 2 of 3 updated replicas are available...
+Waiting for deployment "api" rollout to finish: 2 of 3 updated replicas are available...
+deployment "api" successfully rolled out
+NAME                   READY   STATUS      RESTARTS   AGE
+api-85b49795c4-58hls   1/1     Running     0          6s
+api-85b49795c4-59c4m   0/1     Completed   0          2m33s
+api-85b49795c4-8hczb   1/1     Running     0          2m27s
+api-85b49795c4-n7tv5   1/1     Running     0          6m46s

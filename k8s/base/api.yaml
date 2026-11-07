@@ -1,0 +1,97 @@
+# The question path (§3.2): reads the index, never writes it (§4.2).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  labels: {app: api}
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}   # §4.6
+  selector:
+    matchLabels: {app: api}
+  template:
+    metadata:
+      labels: {app: api}
+    spec:
+      serviceAccountName: api
+      automountServiceAccountToken: false
+      enableServiceLinks: false        # a Service named chroma or redis would inject CHROMA_PORT=tcp://... (failure-log)
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: api
+          image: rahbar-api
+          imagePullPolicy: IfNotPresent
+          ports:
+            - {name: http, containerPort: 8000}
+          envFrom:
+            - configMapRef: {name: rahbar-config}
+          env:
+            - name: LLM_API_KEY          # only for LLM_PROVIDER=hosted; created by make secret
+              valueFrom:
+                secretKeyRef: {name: rahbar-secret, key: LLM_API_KEY, optional: true}
+          # §4.3, exactly: startup and liveness never touch a dependency; readiness does.
+          startupProbe:
+            httpGet: {path: /healthz, port: 8000}
+            failureThreshold: 30
+            periodSeconds: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: 8000}
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: {path: /readyz, port: 8000}
+            periodSeconds: 10
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              sleep: {seconds: 5}        # leave the Service endpoints before connections stop (§4.6)
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  labels: {app: api}
+spec:
+  type: ClusterIP
+  selector: {app: api}
+  ports:
+    - {name: http, port: 8000, targetPort: http}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: api}
+  minReplicas: 3
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}
