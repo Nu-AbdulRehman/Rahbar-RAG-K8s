@@ -19,9 +19,9 @@ A to E first, because only F is the model's fault.
   `"msg": "chunked", "source": "faculty-entrepreneurship-...pdf", "chunks": 0, "ocr_pages": 0`
   (indexer/pipeline/run.py). A document with pages but zero chunks is the signal. In the api,
   the request log line's `chunk_ids` never name that source for questions about it.
-- **Remedy:** OCR is on for every textless page (decision D12). A Job that sees a document
-  produce zero chunks should fail rather than log it. That is not built yet; it is the next
-  guard worth adding.
+- **Remedy:** OCR is on for every textless page (decision D12). A listed document that
+  produces zero chunks now fails the Job with "<file> produced no chunks"
+  (indexer/pipeline/run.py), so this break can no longer pass silently.
 
 ## Stage B · Chunking: fixed 100-word chunks with no overlap
 - **What we broke:** CHUNK_SIZE=100, CHUNK_OVERLAP=0, re-indexed.
