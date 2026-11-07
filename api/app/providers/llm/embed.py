@@ -16,6 +16,9 @@ class OllamaEmbedder:
         # One-entry memo: the cache lookup and the retriever embed the same question
         # back to back, and the second call should not cost a round trip.
         self._last: tuple[str, list[float]] | None = None
+        # Length of the vectors this model returns, known after the first call. The
+        # embedding-pin check compares it with the index (services/pin.py).
+        self.dimension: int | None = None
 
     def embed(self, text: str) -> list[float]:
         last = self._last
@@ -28,4 +31,5 @@ class OllamaEmbedder:
             raise RuntimeError(f"{self.model} returned {len(vectors)} vectors for 1 text")
         vector = [float(v) for v in vectors[0]]
         self._last = (text, vector)
+        self.dimension = len(vector)
         return list(vector)

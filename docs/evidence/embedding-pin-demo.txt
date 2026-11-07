@@ -1,0 +1,32 @@
+# §4.4 demonstration, 2026-11-07T14:25:43Z: change EMBED_MODEL in the ConfigMap, do NOT re-index, restart the api
+$ kubectl -n rahbar patch configmap rahbar-config -p '{"data":{"EMBED_MODEL":"all-minilm"}}'
+configmap/rahbar-config patched
+$ kubectl -n rahbar rollout restart deploy/api
+deployment.apps/api restarted
+error: timed out waiting for the condition
+
+$ kubectl -n rahbar get pods -l app=api
+NAME                   READY   STATUS    RESTARTS   AGE
+api-5bb8d8f68f-j8xkf   1/1     Running   0          89s
+api-5bb8d8f68f-tv8wp   1/1     Running   0          97s
+api-5bb8d8f68f-whk9w   1/1     Running   0          82s
+api-7c6cc68965-2vsnn   0/1     Running   0          61s
+
+$ kubectl -n rahbar logs pod/api-7c6cc68965-2vsnn | grep 'embedding pin'
+{"ts": "2026-11-07T14:25:50Z", "level": "ERROR", "logger": "rahbar.pin", "msg": "embedding pin mismatch", "request_id": "-", "conflict": "index was embedded with EMBED_MODEL='nomic-embed-text' but the api has EMBED_MODEL='all-minilm'; re-index or fix the ConfigMap"}
+
+$ kubectl -n rahbar describe pod/api-7c6cc68965-2vsnn | grep Readiness
+  Warning  Unhealthy  4s (x7 over 54s)   kubelet            spec.containers{api}: Readiness probe failed: HTTP probe failed with statuscode: 503
+
+The old pods (nomic-embed-text) keep serving: maxUnavailable 0 holds the rollout until the new pod is ready, which it never is.
+
+# revert
+configmap/rahbar-config patched
+deployment.apps/api restarted
+deployment "api" successfully rolled out
+NAME                   READY   STATUS        RESTARTS   AGE
+api-5bb8d8f68f-tv8wp   1/1     Terminating   0          118s
+api-5bb8d8f68f-whk9w   0/1     Completed     0          103s
+api-65c7c67d68-kc4xj   1/1     Running       0          14s
+api-65c7c67d68-n9dbr   1/1     Running       0          20s
+api-65c7c67d68-vgnhv   1/1     Running       0          7s

@@ -22,6 +22,8 @@ from .providers.llm import get_provider
 from .providers.llm.embed import OllamaEmbedder
 from .retrieval import get_retriever
 from .routes import ask, health, metrics
+from .services.pin import pin_conflict
+from .services.pin import report as pin_report
 
 log = logging.getLogger("rahbar.api")
 
@@ -36,9 +38,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.retriever = get_retriever(settings, embedder)
     app.state.provider = get_provider(settings)
     app.state.cache = get_cache(settings, embedder)
-    # STARTER-TODO(4.4): compare the collection's embedding-model metadata with
-    # settings.embed_model here, and make /readyz fail on a mismatch.
-    # This process only reads the index. The indexer Job writes it.
+    app.state.embedder = embedder
+    app.state.pin_conflict = None
+    # The embedding pin (section 4.4), checked once here and again on every /readyz, since
+    # a re-index can change it while the pod runs. This process only reads the index.
+    _check_pin_at_startup(app)
     log.info(
         "api started",
         extra={"retriever": settings.retriever, "llm_provider": settings.llm_provider,
@@ -46,6 +50,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                "cache": settings.cache},
     )
     yield
+
+
+def _check_pin_at_startup(app: FastAPI) -> None:
+    state = app.state
+    try:
+        pin = getattr(state.retriever, "pin", lambda: None)()
+        if pin is not None and pin.get("embed_model") == state.settings.embed_model:
+            state.embedder.embed("embedding pin probe")      # learn this model's dimension
+    except Exception as exc:  # Chroma or Ollama still booting: /readyz checks again
+        log.warning("embedding pin not checked at startup", extra={"error": type(exc).__name__})
+        return
+    state.pin_conflict = pin_report(pin_conflict(pin, state.settings, state.embedder.dimension),
+                                    None)
 
 
 app = FastAPI(title="RAHBAR API", lifespan=lifespan)

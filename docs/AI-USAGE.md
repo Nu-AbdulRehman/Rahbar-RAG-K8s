@@ -109,6 +109,15 @@
 - **Shaped / Wrote:** how the indexer reaches nu.edu.pk: an ipBlock for its one address 203.124.44.78/32 on 443 (chosen); rejected 0.0.0.0/0 on 443 (opens the whole internet to the only Chroma writer); rejected an egress proxy or Calico's DNS-name policies (a new component, or a Calico-only API that kind's CNI in CI would not apply).
 - **I changed:** accepted as-is. If the university moves the site, the Job fails at the fetch step with a timeout, which is loud, and the fix is one CIDR.
 
+## 2026-11-07 · feat/s4.4-embed-pin
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** swap-task list (Dev 2 into the RAG area): read the indexer's pin from the collection metadata (§4.4); compare model name and vector dimension with the api's EMBED_MODEL and embedder (§4.4); fail /readyz with 503 naming both values (§4.3, §4.4); log the conflict once, not on every probe (§4.8); test mismatch, match, dimension and recovery (§4.4); demonstrate on minikube by changing the ConfigMap without re-indexing (§4.4).
+- **I changed:** accepted as-is.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** where the pin is checked: once at startup and again on every /readyz (chosen, since a re-index can change the collection while the pod runs); rejected startup only (a pod started before a model change keeps serving the wrong index), and rejected checking inside every /api/ask (a per-question Chroma metadata read, and the user would get a fallback instead of the pod leaving the Service). How the api learns its own dimension: one probe embedding at startup and the length of every later vector (chosen); rejected a dimension in the ConfigMap (a second, hand-typed copy of the pin, which CLAUDE.md §1.4 forbids).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -156,3 +165,4 @@
 - 2026-11-07 · feat/s4.1-k8s-base · k8s/base (namespace, ServiceAccounts, ConfigMap, placeholder Secret, chroma StatefulSet, redis Deployment+PVC, api with the §4.3 probes and HPA, ui, indexer Job and CronJob, Ingress) and dev/prod overlays; real index built in-cluster (803 chunks), answers through the Ingress, 20/20 requests 200 while an api pod was deleted (docs/evidence/cluster-proof.txt) (§4.1-§4.3, §4.6).
 - 2026-11-07 · feat/s4.1-k8s-base · ChromaRetriever connects on first use, so a Chroma that is down at boot leaves the api alive and not ready instead of crash-looping; enableServiceLinks: false on every pod after the CHROMA_PORT service-link crash (§4.3).
 - 2026-11-07 · feat/s4.7-network-policy · k8s/base/networkpolicy.yaml: deny by default, then DNS, ui, api, chroma, redis and indexer rules; ui cannot reach chroma or redis, api can, the internet is closed except nu.edu.pk for the indexer; a full re-index and cited answers still work (docs/evidence/networkpolicy-proof.txt) (§4.7).
+- 2026-11-07 · feat/s4.4-embed-pin · Embedding-pin guard (swap task): services/pin.py compares the collection's embed_model and dimension with the api's EMBED_MODEL and embedder; /readyz returns 503 naming both and logs the conflict once; 11 tests, shown red with the readyz check removed; minikube demo in docs/evidence/embedding-pin-demo.txt (§4.3, §4.4).

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from ..schemas import Passage
 
@@ -18,3 +18,8 @@ class Retriever(Protocol):
     def count(self) -> int:
         """Chunks in the index; raises if the store or the collection is unreachable."""
         ...
+
+    def pin(self) -> dict[str, Any] | None:
+        """The embedding pin the indexer recorded ({"embed_model", "dimension"}), or None
+        for a retriever with no index behind it (section 4.4)."""
+        return None
