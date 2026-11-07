@@ -19,13 +19,22 @@ class ChromaRetriever:
     def __init__(self, settings: Settings, embedder: Embedder, client: Any = None) -> None:
         self.settings = settings
         self.embedder = embedder
-        if client is None:
+        self._client = client
+
+    @property
+    def client(self) -> Any:
+        """Connect on first use, not at startup: HttpClient contacts the server when it is
+        built, so a Chroma that is down at boot would crash the process instead of leaving it
+        alive and not ready (section 4.3). A failed connect is retried on the next call."""
+        if self._client is None:
             import chromadb  # the thin client, from chromadb-client in requirements.txt
             from chromadb.config import Settings as ChromaSettings
 
-            client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port,
-                                         settings=ChromaSettings(anonymized_telemetry=False))
-        self.client = client
+            s = self.settings
+            self._client = chromadb.HttpClient(
+                host=s.chroma_host, port=s.chroma_port,
+                settings=ChromaSettings(anonymized_telemetry=False))
+        return self._client
 
     def collection(self) -> Any:
         """Look the collection up on every call: after a model change the indexer rebuilds

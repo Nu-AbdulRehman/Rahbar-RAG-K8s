@@ -1,0 +1,31 @@
+# Every tunable, read by both programs through api/app/config.py and
+# indexer/pipeline/config.py (§4.1). Values and their sources: docs/PIPELINE.md
+# "Configuration for the cluster". A change is `kubectl apply -k` plus a rollout restart
+# of the api (or a re-index for the indexer keys), never a rebuild.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rahbar-config
+data:
+  RETRIEVER: "chroma"
+  LLM_PROVIDER: "ollama-host"          # D1; "hosted" is the one-file swap, key from rahbar-secret
+  LLM_MODEL: "llama3.2:3b"             # D1
+  EMBED_MODEL: "nomic-embed-text"      # D2; THE pin: one key, read by api and indexer (§4.4)
+  OLLAMA_URL: "http://host.minikube.internal:11434"   # Ollama on the host, OLLAMA_HOST=0.0.0.0
+  HOSTED_BASE_URL: ""
+  CHROMA_HOST: "chroma"                # Service DNS name, never localhost
+  CHROMA_PORT: "8000"
+  CHROMA_COLLECTION: "rahbar"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  CHUNK_SIZE: "150"                    # words; best recall@5 of 6 configs (PIPELINE.md "Chunking")
+  CHUNK_OVERLAP: "30"                  # words; same table
+  TOP_K: "5"                           # top_k 1 drops recall@5 from 0.938 to 0.656 (FAILURE-ANALYSIS C)
+  RELEVANCE_FLOOR: "0.65"              # between must-abstain max 0.600 and answerable min 0.695
+  CACHE: "redis"                       # the code default is none, for make dev
+  CACHE_THRESHOLD: "0.96"              # lowest with zero false hits; 0.95 hit "15 days" on "30 days"
+  TEMPERATURE: "0.2"                   # facts and JSON need 0-0.3 (startup refuses more); 0 invalid replies in 22
+  LLM_TIMEOUT_SECONDS: "60"            # per call; REQUEST_BUDGET_SECONDS bounds the whole request
+  REQUEST_BUDGET_SECONDS: "50"         # below nginx-ingress's 60 s proxy-read-timeout, so no 504 reaches users
+  LOG_LEVEL: "INFO"                    # prompts and history are DEBUG only (ADR 0004); keep INFO
+  CORPUS_DIR: "/corpus"                # the indexer's emptyDir, filled by corpus/fetch.py (Q4)

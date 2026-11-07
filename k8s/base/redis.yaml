@@ -1,0 +1,77 @@
+# The semantic cache (§3.3, ADR 0003): a Deployment with a PVC and append-only persistence,
+# so a restarted pod keeps its entries and the cache generation key.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels: {app: redis}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate                     # RWO volume: the old pod lets go before the new one mounts it
+  selector:
+    matchLabels: {app: redis}
+  template:
+    metadata:
+      labels: {app: redis}
+    spec:
+      serviceAccountName: redis
+      automountServiceAccountToken: false
+      enableServiceLinks: false        # a Service named chroma or redis would inject CHROMA_PORT=tcp://... (failure-log)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999                 # the image's redis user
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: redis
+          image: redis:7.4.2
+          args: ["redis-server", "--appendonly", "yes", "--dir", "/data"]
+          ports:
+            - {name: redis, containerPort: 6379}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+          readinessProbe:
+            exec: {command: ["redis-cli", "ping"]}
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: {port: redis}
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: redis-data}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels: {app: redis}
+spec:
+  type: ClusterIP                      # never NodePort or LoadBalancer (§4.1)
+  selector: {app: redis}
+  ports:
+    - {name: redis, port: 6379, targetPort: redis}

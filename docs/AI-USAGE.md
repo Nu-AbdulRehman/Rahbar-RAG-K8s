@@ -91,6 +91,15 @@
 - **Shaped / Wrote:** how the indexer image gets corpus/fetch.py and the manifest: build context = repository root with `-f indexer/Dockerfile` and an allowlist `.dockerignore` at the root (chosen); rejected BuildKit named contexts (`--build-context corpus=corpus`: two extra contexts for corpus/ and eval/fixtures, and corpus/raw would be sent unless each has its own ignore file); rejected copying corpus files into indexer/ in the Makefile (generated copies that drift from the committed MANIFEST).
 - **I changed:** accepted as-is. The checker's `indexer/.dockerignore` line stays red because it assumes context `indexer/`; the root file does that job.
 
+## 2026-11-07 · feat/s4.1-k8s-base
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D2-P3 task list: start minikube with Calico, metrics-server and ingress (§4.1); write the namespace, one ServiceAccount per workload, the ConfigMap and the placeholder Secret (§4.1, §4.7); write the chroma StatefulSet and the redis Deployment with a PVC, both ClusterIP (§4.1); write the api Deployment with the §4.3 probes, maxSurge 1, maxUnavailable 0 and a preStop sleep (§4.3, §4.6); write the indexer Job and the weekly reindex CronJob (§4.2); write the Ingress and the HPA (§4.1); write the dev and prod overlays (§6); run the indexer, ask through the Ingress, delete an api pod (§1.3).
+- **I changed:** started from the real configuration (RETRIEVER=chroma, LLM_PROVIDER=ollama-host) instead of the stubs, because Dev 1's pipeline was already merged; the stub-first order in STARTER.md exists for when it is not.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** what the prod overlay commits as the image tag: a fixed `set-by-cd` value that cd.yml replaces with `${{ github.sha }}` (chosen); rejected committing a real SHA after every merge (a bot commit per deploy, and the tag would name the commit before itself); rejected one overlay per environment variable (`envsubst` on the YAML: a second templating tool beside Kustomize).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -135,3 +144,5 @@
 - 2026-11-07 · feat/s3.4-brief-gaps · docs/handover/dev1-input-for-dev2.md: README paragraphs (corpus via MANIFEST and fetch.py, embeddings through the same Ollama host, a no-cluster run), and the indexer facts for ADR 0001 and the data-flow facts for ADR 0004, each traced to a file (§2, §3.5, §4.2).
 - 2026-11-07 · docs/s6-account-split · CLAUDE.md §1.23 and AGENTS.md name the account for each dev's work: Dev 1 as Nu-AbdulRehman, Dev 2 as MTH99910, for commits, PRs and reviews, each reviewing the other's PRs (§6).
 - 2026-11-07 · feat/s4.7-container-images · api, indexer and ui Dockerfiles on pinned bases, non-root numeric USER, exec-form CMD; indexer built from the repository root with an allowlist .dockerignore so it carries fetch.py, MANIFEST and the fixtures; all three verified read-only with only /tmp writable (§4.7, §6).
+- 2026-11-07 · feat/s4.1-k8s-base · k8s/base (namespace, ServiceAccounts, ConfigMap, placeholder Secret, chroma StatefulSet, redis Deployment+PVC, api with the §4.3 probes and HPA, ui, indexer Job and CronJob, Ingress) and dev/prod overlays; real index built in-cluster (803 chunks), answers through the Ingress, 20/20 requests 200 while an api pod was deleted (docs/evidence/cluster-proof.txt) (§4.1-§4.3, §4.6).
+- 2026-11-07 · feat/s4.1-k8s-base · ChromaRetriever connects on first use, so a Chroma that is down at boot leaves the api alive and not ready instead of crash-looping; enableServiceLinks: false on every pod after the CHROMA_PORT service-link crash (§4.3).
