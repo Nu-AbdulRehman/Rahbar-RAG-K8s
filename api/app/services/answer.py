@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from ..config import Settings
 from ..logjson import request_id_var
@@ -55,28 +56,39 @@ def answer_question(
     # Follow-ups skip the cache both ways: their meaning depends on the conversation.
     # Standalone questions are keyed on the question alone, never on history (ADR 0002).
     if follow_up or not cache.enabled:
-        metrics.CACHE_LOOKUPS.labels(result="skipped").inc()
+        metrics.record_cache_lookup("skipped")
     else:
         hit, similarity = cache.lookup(question)
-        metrics.CACHE_LOOKUPS.labels(result="hit" if hit else "miss").inc()
+        metrics.record_cache_lookup("hit" if hit else "miss")
         if hit:
             return _cached(hit, similarity, provider, summary, history, settings)
 
     include_old = asks_about_older_version(query)
     abstained = False
+    started = time.perf_counter()
     try:
         passages = retriever.retrieve(query, k=settings.top_k, include_superseded=include_old)
     except Exception as exc:  # Chroma or the embedder down: degrade, never a 500
         log.warning("retrieval failed", extra={"error": type(exc).__name__})
         passages, result = [], Generated(FALLBACK, True, 0)
+        metrics.FALLBACKS.labels(reason="retrieval").inc()
     else:
+        metrics.RETRIEVAL_LATENCY.observe(time.perf_counter() - started)
         evidence = [p for p in passages if p.score >= settings.relevance_floor]
         if not evidence:
             abstained, result = True, Generated(ABSTAIN, False, 0)
+            metrics.ABSTENTIONS.inc()
         else:
             prompt = build_prompt(question, evidence, settings.temperature,
                                   context_block(summary, history))
+            log.debug("prompt", extra={"system": prompt.system, "user": prompt.user})
+            started = time.perf_counter()
             result = generate(provider, prompt, evidence)
+            metrics.GENERATION_LATENCY.observe(time.perf_counter() - started)
+            metrics.TOKENS.labels(direction="in").observe(result.tokens_in)
+            metrics.TOKENS.labels(direction="out").observe(result.tokens_out)
+            if result.fallback:
+                metrics.FALLBACKS.labels(reason="generation").inc()
 
     new_summary, summary_failed = updated_summary(provider, summary, history,
                                                   settings.history_turns, settings.temperature)
