@@ -26,6 +26,14 @@ FALLBACK = Answer(
 )
 
 
+DECLINED = Answer(
+    reasoning="the model found no answer in the evidence",
+    answer="The documents I can search do not answer this question, so I cannot answer it "
+           "from them. Please check with the relevant office.",
+    citations=[], answered_from_context=False, confidence="low",
+)
+
+
 @dataclass
 class Generated:
     answer: Answer
@@ -59,6 +67,10 @@ def generate(provider: LLMProvider, prompt: Prompt, retrieved: list[Passage]) ->
             answer = check_citations(Answer.model_validate_json(completion.text), retrieved)
             if answer.answered_from_context and not answer.citations:
                 raise ValueError("a claim-bearing answer has no valid citation")
+            if not answer.answered_from_context:
+                # The model says the evidence does not answer it. Its text is uncited by
+                # definition, so the user sees the standard decline, never the model's guess.
+                answer = DECLINED
             return Generated(answer, False, attempt, tokens_in, tokens_out)
         except (ValidationError, ValueError) as exc:
             log.warning("invalid model output", extra={"attempt": attempt,

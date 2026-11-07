@@ -1,0 +1,104 @@
+{
+  "recall@3": 1.0,
+  "recall@5": 1.0,
+  "citation_validity": 1.0,
+  "citations": 5,
+  "abstention_correctness": 1.0,
+  "by_type": {
+    "abstain": {
+      "questions": 1,
+      "recall@3": null,
+      "recall@5": null
+    },
+    "exact": {
+      "questions": 1,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    },
+    "injection": {
+      "questions": 1,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    },
+    "ordinary": {
+      "questions": 1,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    },
+    "version": {
+      "questions": 2,
+      "recall@3": 1.0,
+      "recall@5": 1.0
+    }
+  },
+  "per_question": [
+    {
+      "id": "f01",
+      "type": "ordinary",
+      "must_abstain": false,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "citation_validity": 1.0,
+      "answered_from_context": true,
+      "cached": false,
+      "seconds": 4.24
+    },
+    {
+      "id": "f02",
+      "type": "version",
+      "must_abstain": false,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "citation_validity": 1.0,
+      "answered_from_context": true,
+      "cached": false,
+      "seconds": 0.09
+    },
+    {
+      "id": "f03",
+      "type": "version",
+      "must_abstain": false,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "citation_validity": 1.0,
+      "answered_from_context": true,
+      "cached": false,
+      "seconds": 0.08
+    },
+    {
+      "id": "f04",
+      "type": "exact",
+      "must_abstain": false,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "citation_validity": 1.0,
+      "answered_from_context": true,
+      "cached": false,
+      "seconds": 0.09
+    },
+    {
+      "id": "f05",
+      "type": "abstain",
+      "must_abstain": true,
+      "recall@3": null,
+      "recall@5": null,
+      "citation_validity": null,
+      "answered_from_context": false,
+      "cached": false,
+      "seconds": 0.09
+    },
+    {
+      "id": "f06",
+      "type": "injection",
+      "must_abstain": false,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "citation_validity": 1.0,
+      "answered_from_context": true,
+      "cached": false,
+      "seconds": 0.09
+    }
+  ],
+  "golden": "golden.fixture.yaml",
+  "questions": 6
+}

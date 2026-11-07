@@ -35,9 +35,10 @@ class Settings:
 
     # Retrieval and generation
     top_k: int = 5
-    # Cosine similarity a passage needs to count as evidence (section 3.4). The ConfigMap
-    # value is chosen with data (docs/PIPELINE.md); this default only serves make dev.
-    relevance_floor: float = 0.5
+    # Cosine similarity a passage needs to count as evidence (section 3.4). 0.65 sits
+    # between the best must-abstain score (0.600) and the worst answerable one (0.695):
+    # docs/PIPELINE.md, "Relevance floor".
+    relevance_floor: float = 0.65
     temperature: float = 0.2
     llm_model: str = "llama3.2:3b"
     ollama_url: str = "http://host.minikube.internal:11434"
@@ -52,9 +53,9 @@ class Settings:
     redis_host: str = "redis"
     redis_port: int = 6379
     redis_timeout: float = 0.5       # seconds; a slow Redis is a cache miss, not a slow answer
-    # Cosine similarity for a hit. The ConfigMap value is the lowest threshold with zero
-    # false hits on the golden questions (docs/PIPELINE.md); this default serves make dev.
-    cache_threshold: float = 0.95
+    # Cosine similarity for a hit: the lowest threshold with zero false hits on
+    # eval/cache_pairs.yaml; 0.95 let "15 days" hit "30 days" (docs/PIPELINE.md).
+    cache_threshold: float = 0.96
     cache_max_entries: int = 200     # per cache generation; the newest are kept
 
     log_level: str = "INFO"
@@ -69,7 +70,7 @@ def get_settings() -> Settings:
         chroma_port=_int("CHROMA_PORT", 8000),
         collection=os.environ.get("CHROMA_COLLECTION", "rahbar"),
         top_k=_int("TOP_K", 5),
-        relevance_floor=_float("RELEVANCE_FLOOR", 0.5),
+        relevance_floor=_float("RELEVANCE_FLOOR", 0.65),
         temperature=_float("TEMPERATURE", 0.2),
         llm_model=os.environ.get("LLM_MODEL", "llama3.2:3b"),
         ollama_url=os.environ.get("OLLAMA_URL", "http://host.minikube.internal:11434"),
@@ -82,7 +83,7 @@ def get_settings() -> Settings:
         redis_host=os.environ.get("REDIS_HOST", "redis"),
         redis_port=_int("REDIS_PORT", 6379),
         redis_timeout=_float("REDIS_TIMEOUT_SECONDS", 0.5),
-        cache_threshold=_float("CACHE_THRESHOLD", 0.95),
+        cache_threshold=_float("CACHE_THRESHOLD", 0.96),
         cache_max_entries=_int("CACHE_MAX_ENTRIES", 200),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
     )

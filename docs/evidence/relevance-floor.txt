@@ -1,0 +1,31 @@
+# Relevance floor measurement, 2026-11-07 (150/30 index, top score per golden question)
+
+0.5720  q16  abstain   must_abstain=true
+0.5908  q20  injection must_abstain=true
+0.5945  q17  abstain   must_abstain=true
+0.6001  q18  abstain   must_abstain=true
+0.6945  q06  ordinary  must_abstain=false
+0.7155  q03  ordinary  must_abstain=false
+0.7208  q07  ordinary  must_abstain=false
+0.7360  q13  exact     must_abstain=false
+0.7371  q15  exact     must_abstain=false
+0.7453  q10  ordinary  must_abstain=false
+0.7656  q11  version   must_abstain=false
+0.7688  q19  injection must_abstain=false
+0.7735  q12  version   must_abstain=false
+0.7912  q14  exact     must_abstain=false
+0.7935  q21  followup  must_abstain=false
+0.7970  q04  ordinary  must_abstain=false
+0.7989  q22  followup  must_abstain=false
+0.8176  q09  ordinary  must_abstain=false
+0.8212  q08  ordinary  must_abstain=false
+0.8319  q05  ordinary  must_abstain=false
+0.8382  q02  ordinary  must_abstain=false
+0.8669  q01  ordinary  must_abstain=false
+
+floor  must-abstain answered  answerable declined
+0.60   q18                     -
+0.62   -                       -
+0.65   -                       -
+0.68   -                       -
+0.70   -                       q06

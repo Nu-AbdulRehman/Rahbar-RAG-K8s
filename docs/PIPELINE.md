@@ -1,8 +1,6 @@
 # Indexing and retrieval pipeline
 
-<!-- STARTER-TODO(3.1, 3.3, 5.2): the chunking table and the cache thresholds are measured on the cluster (D1-P7); fill them, then delete this comment. -->
-
-`python -m pipeline.run` runs extract, clean, chunk, embed and store, then expires the semantic cache. Numbers below are from the real corpus (9 documents, `corpus/MANIFEST.md`) at CHUNK_SIZE=400, CHUNK_OVERLAP=50, on 2026-11-07.
+`python -m pipeline.run` runs extract, clean, chunk, embed and store, then expires the semantic cache. Numbers below are from the real corpus (9 documents, `corpus/MANIFEST.md`) and `eval/golden.yaml`, measured on 2026-11-07 with chromadb 1.0.12 and Ollama 0.40.15 (nomic-embed-text, llama3.2:3b) on a laptop GPU. The cluster runs the same images and models, so the numbers carry over; re-measure if either model changes.
 
 ## Corpus delivery to the Job
 
@@ -55,18 +53,57 @@ pdfplumber, every page cropped to its page box (`indexer/pipeline/extract.py`). 
 
 Unit: words (whitespace tokens), decision D14. CHUNK_SIZE counts the heading line that starts every chunk. Splitting order: section (heading), then paragraph (blank line, clause number, list marker or table), then sentence or table row, then fixed word windows for a sentence longer than a chunk. Chunks never cross a section, and overlap repeats the last CHUNK_OVERLAP words of the previous chunk in the same section.
 
-At 400/50: **550 chunks**, 67,229 words after cleaning, 67,811 stored. **Storage amplification 1.009**. Most sections are shorter than 400 words, so overlap and repeated headings add little. The amplification is in the Job's `chunking done` log line.
+Six configurations, each indexed into its own collection and scored on the 16 golden questions that have relevant passages (retrieval only, top_k 5). Raw numbers, per question: `docs/evidence/tuning-chunks.json`.
 
-| Size (words) | Overlap (words) | recall@5 | Chunks stored |
-| --- | --- | --- | --- |
-| 400 | 50 | measured in D1-P7 | 550 |
+| Size (words) | Overlap (words) | recall@3 | recall@5 | Chunks stored | Storage amplification |
+| --- | --- | --- | --- | --- | --- |
+| 800 | 100 | 0.781 | 0.781 | 517 | 0.985 |
+| 400 | 50 | 0.781 | 0.781 | 549 | 1.009 |
+| 200 | 40 | 0.781 | 0.844 | 676 | 1.084 |
+| **150** | **30** | **0.844** | **0.938** | **803** | **1.123** |
+| 100 | 20 | 0.844 | 0.906 | 1,105 | 1.184 |
+| 100 | 0 | 0.938 | 0.938 | 1,009 | 1.010 |
+
+**Shipped: 150/30.** It ties the best recall@5 (0.938) with a fifth fewer chunks than 100/0, and each passage the model sees is half as long again. The overlap means a sentence cut at a chunk boundary still appears whole in one of the two neighbours, which matters for the Generative AI policy's long definitions (corpus property 5). Storage amplification is 1.123: about 75,500 stored words for 67,229 cleaned words, from the overlap plus the heading every chunk repeats.
+
+What the table says: the large chunks lose q03 ("passed its prerequisite") and q08 (literature reviews), because a 400-word "Scheduling of Classes" chunk or Generative AI chunk averages its meaning across five rules, and the specific one stops winning. Smaller chunks give each rule its own vector. Breaking stage B on purpose (100 words, no overlap) does **not** hurt recall here, because every chunk still carries its section heading; see FAILURE-ANALYSIS.md. One question is 6.25 points of recall@5 at this size of golden set, so 0.906 against 0.938 is a single question.
 
 ## Embedding
 
-Model `EMBED_MODEL` from the ConfigMap (nomic-embed-text, decision D2), through Ollama's `POST /api/embed` in batches of `EMBED_BATCH_SIZE`. The dimension is whatever the model returns; nothing in the code names a model or a dimension. `store.py` writes `embed_model` and `dimension` into the collection metadata (D16). A model or dimension change rebuilds the collection; an ordinary re-index upserts and prunes (D15), so the API never sees an empty collection.
+Model `EMBED_MODEL` from the ConfigMap (nomic-embed-text, decision D2), through Ollama's `POST /api/embed` in batches of `EMBED_BATCH_SIZE`. Vector dimension 768, as nomic-embed-text returns it; nothing in the code names a model or a dimension. `store.py` writes `embed_model` and `dimension` into the collection metadata (D16). A model or dimension change rebuilds the collection; an ordinary re-index upserts and prunes (D15), so the API never sees an empty collection.
+
+## Relevance floor
+
+The top similarity of every golden question on the shipped 150/30 index (`docs/evidence/relevance-floor.txt`): the four must-abstain questions (hostel rules, plus the injection that asks about them) top out at **0.600**, and the lowest answerable question scores **0.695** (q06, B+ grade points).
+
+| RELEVANCE_FLOOR | Must-abstain answered | Answerable declined |
+| --- | --- | --- |
+| 0.60 | q18 (curfew, 0.6001) | none |
+| 0.62 | none | none |
+| **0.65** | **none** | **none** |
+| 0.70 | none | q06 |
+
+**Shipped: 0.65**, the middle of the 0.600 to 0.695 gap, so either side has about 0.05 of margin. On the CI fixtures the abstain question scores 0.472 and the lowest answerable one 0.660, which is close to the floor: if e2e-eval ever fails f06 on recall alone, look here first.
 
 ## Semantic cache
-Thresholds you tried, the false hit that ruled one out, the one you shipped.
+
+Cosine similarity between the 16 question pairs in `eval/cache_pairs.yaml`, written before measuring: 7 paraphrases that may share a cached answer, and 9 near misses that must never hit (`docs/evidence/cache-threshold.txt`).
+
+| CACHE_THRESHOLD | False hits | Paraphrases that hit |
+| --- | --- | --- |
+| 0.90 | 3 | 3 of 7 |
+| 0.95 | 1 | 2 of 7 |
+| **0.96** | **0** | **1 of 7** |
+
+**The false hit that ruled out 0.95:** "How much of the fee is refunded if I leave within the first 15 days of classes?" against the same question with "30 days", at 0.9517. Those answers are 80 % and 50 %. At 0.90 the campus transfer fee also hit the temporary campus transfer fee (0.909), and the undergraduate warning CGPA hit the MS one (0.904). **Shipped: 0.96**, the lowest threshold tried with zero false hits. It is deliberately conservative: only near-verbatim repeats hit (the generative-AI paraphrase at 0.967), because the embedder barely tells numbers apart, and a cached wrong fee is served to everyone.
+
+## Generation and the baseline
+
+`eval/results.json` and `eval/baseline.json` come from `python eval/run_eval.py --api http://localhost:8000 --update-baseline` against the api with RETRIEVER=chroma, LLM_PROVIDER=ollama-host (llama3.2:3b), the 150/30 index, RELEVANCE_FLOOR 0.65 and TEMPERATURE 0.2: recall@3 0.844, recall@5 0.938, citation validity 1.00 (13 citations), abstention correctness 1.00. By type, recall@5: ordinary 1.00, version 1.00, injection 1.00, exact 0.667, follow-up 0.50 (not gated).
+
+The fixture baseline `eval/fixtures/baseline.fixture.json` was taken the way CI runs (decision Q3): fixtures indexed at 150/30 with nomic-embed-text, LLM_PROVIDER=stub. Recall@5 1.00, citation validity 1.00, abstention 1.00.
+
+The first real run surfaced two generation faults, both now fixed and logged in docs/failure-log.md: llama3.2:3b miscopied citation fields ("1.2 Academic Year" for "Academic Year"), and once marked a correct answer as `answered_from_context: false`. Each evidence passage now ends with the exact citation JSON to copy, and a reply marked not-from-context always shows the standard decline instead of the model's own text. Invalid replies went from 4 to 0 in a run of 22 questions. The model still declines 5 answerable questions (q03, q04, q07, q08, q13). That costs helpfulness, not grounding, and the gate does not score it.
 
 ## Evaluation method
 
