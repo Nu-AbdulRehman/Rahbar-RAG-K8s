@@ -17,8 +17,8 @@ the same Ollama host. Local cluster: minikube with Calico, `metrics-server` and 
 CI clusters: kind. CI/CD: GitHub Actions, images on Docker Hub tagged by commit SHA.
 
 **Status:** the repo starts as the starter kit (`STARTER.md`). Every function we own raises
-`NotImplementedError` next to a `STARTER-TODO(section)` marker. Find the open work with
-`grep -rn STARTER-TODO --exclude-dir=.venv .`. The kit has no Dockerfiles, manifests, or
+`NotImplementedError` next to a starter-kit `TODO(section)` marker. Find the open work with
+`grep -rn 'STARTER-[T]ODO' --exclude-dir=.venv .`. The kit has no Dockerfiles, manifests, or
 workflows. All of those are ours.
 
 **Order of work** (STARTER.md "How the week runs"): first, the whole system on minikube
@@ -215,7 +215,7 @@ entries above. Full rule: `CLAUDE.md` §8.
 
 "The code runs" is not enough. A phase is done when:
 1. Every item on the phase's `caveman` task list is demonstrably true, and its
-   `STARTER-TODO` markers are gone.
+   starter-kit TODO markers are gone.
 2. `make test` and `make lint` are green and coverage holds at ≥ 60 %.
 3. `make check` reports no new violations, and the manifests pass kubeconform.
 4. The behaviour the brief asks you to *demonstrate* has its evidence committed in
@@ -238,7 +238,7 @@ entries above. Full rule: `CLAUDE.md` §8.
 | What does the API actually promise? | `STARTER.md` "The contract", `api/app/schemas.py` |
 | What must never break? | `CLAUDE.md` §1–§2, brief §8 |
 | Was this already decided? | `docs/decisions/DECISIONS.md`, `docs/adr/` |
-| Which section does this TODO belong to? | the `STARTER-TODO(section)` comment, then the brief |
+| Which section does this TODO belong to? | the starter-kit `TODO(section)` comment, then the brief |
 | Which env var, port, or image version? | `STARTER.md` "Configuration" and "Images and ports" |
 | Why is my pod not ready / crashing? | brief §9 traps table, `docs/failure-log.md` |
 | What does the corpus need to contain? | brief §2, `docs/CORPUS.md` |
