@@ -127,6 +127,16 @@
 - **Shaped / Wrote:** how the scan gets the image: build once per image, export it as an artifact, scan in a needs: build job (chosen); rejected building again inside the scan job (two builds that can differ), and rejected pushing to a registry from CI to scan there (nothing may push from a PR, §6).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s6-ci (cd.yml)
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D2-P7 task list: run the tests again on the main commit (§6); log in to Docker Hub with an access token from GitHub Secrets (§6); push the three images tagged with the commit SHA, needs: test (§6); create an ephemeral kind cluster, needs: build-push (§6); deploy that SHA and wait on rollout status (§6); smoke-test through the Ingress (§6).
+- **I changed:** the deploy runs the prod images with the stub provider and the dummy index (k8s/overlays/ci), because kind has no Ollama; the real pipeline is proven on minikube instead (docs/evidence/cluster-proof.txt).
+
+## 2026-11-07 · feat/s4.5-resources
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D2-P5 task list: sample kubectl top pods during a real index and a 40-question burst (§4.5); set requests and limits on every container from the peaks with a stated margin (§4.5); commit the raw output (§4.5); capture the HPA reading a real value (§4.5); show 3 api endpoints without touching the Service (§4.6); set image, watch the rollout, undo it (§4.6). The embedding-pin demonstration is already in docs/evidence/embedding-pin-demo.txt (§4.4).
+- **I changed:** accepted as-is. My first summary compared the samples as strings and under-read the indexer's peak as 77m and 703Mi; the real peak is 1659m and 1159Mi, which would have put the indexer at 75 % of its provisional limit.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -177,4 +187,6 @@
 - 2026-11-07 · feat/s4.4-embed-pin · Embedding-pin guard (swap task): services/pin.py compares the collection's embed_model and dimension with the api's EMBED_MODEL and embedder; /readyz returns 503 naming both and logs the conflict once; 11 tests, shown red with the readyz check removed; minikube demo in docs/evidence/embedding-pin-demo.txt (§4.3, §4.4).
 - 2026-11-07 · feat/s6-ci · Newer pinned bases (python:3.12.16-slim, nginx-unprivileged:1.30.6-alpine) plus OS upgrades: Trivy finds no fixable HIGH or CRITICAL OS package; Python pins in api/ and indexer/ still need Dev 1's bump (§6).
 - 2026-11-07 · feat/s6-ci · .github/workflows/ci.yml: lint, test (coverage at least 60 %), manifests (kubeconform -strict on dev and prod, no :latest), build (no push) and Trivy scan, read-only permissions (§6).
+- 2026-11-07 · feat/s6-ci · .github/workflows/cd.yml: test, build-push by commit SHA to docker.io/mth99910 (needs: test), deploy to kind with ingress-nginx and a smoke test through the Ingress (needs: build-push); k8s/overlays/ci runs it with stubs and the dummy index (§6).
+- 2026-11-07 · feat/s4.5-resources · Requests and limits on every container from kubectl top peaks (indexer 1659m/1159Mi, api 186m/129Mi, chroma 26m/107Mi), HPA at 4-6 % of 70 %, 3 api endpoints, rollout to v2 and undo (docs/evidence/kubectl-top.txt, rollout-and-endpoints.txt) (§4.5, §4.6).
 - 2026-11-07 · feat/s6-ci · Dev 1: bumped fastapi to 0.162.1 with starlette 1.10.0 and pdfplumber to 0.11.10 (pdfminer.six 20260107), moved pypdf to the indexer's dev requirements; Trivy exit 0 on all three images, suites green, the real corpus chunks to the same 803 chunks with identical per-document hashes (§6).

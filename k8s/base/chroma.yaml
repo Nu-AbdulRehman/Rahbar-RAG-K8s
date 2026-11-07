@@ -40,13 +40,13 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 20
             failureThreshold: 3
-          resources:
+          resources:                  # peak 26m, 107Mi with 803 chunks; limit leaves room for the index to grow (docs/evidence/kubectl-top.txt)
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 50m
+              memory: 160Mi
             limits:
-              cpu: "1"
-              memory: 1Gi
+              cpu: "500m"
+              memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

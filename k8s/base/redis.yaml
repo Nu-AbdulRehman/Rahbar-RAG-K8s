@@ -48,13 +48,13 @@ spec:
           livenessProbe:
             tcpSocket: {port: redis}
             periodSeconds: 20
-          resources:
+          resources:                  # peak 9m, 11Mi (docs/evidence/kubectl-top.txt)
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: 20m
+              memory: 32Mi
             limits:
-              cpu: 250m
-              memory: 256Mi
+              cpu: "100m"
+              memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
