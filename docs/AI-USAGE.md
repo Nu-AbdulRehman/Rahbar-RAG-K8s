@@ -22,7 +22,7 @@
 - **I changed:** accepted as-is.
 
 - **Tool:** Claude Code + `ponytail`
-- **Shaped / Wrote:** OCR engine (D12) and PDF extraction library (D13).
+- **Shaped / Wrote:** OCR engine (D12), PDF extraction library (D13), chunk unit (D14).
 - **I changed:** accepted as-is. pdf2image was dropped from indexer/requirements.txt because nothing uses it.
 
 ## Task log
@@ -36,3 +36,4 @@
 - 2026-11-07 · feat/s5-eval-harness · Ran the fixture eval end to end against stubs (exit 1, as expected), recorded the evaluation method in PIPELINE.md; fixture baseline deferred until the real retriever runs (§5.4).
 - 2026-11-07 · feat/s3.1-indexer · Implemented extract: PDF cropped to the page box, headings by font size, tesseract OCR for textless pages (41 pages in the corpus), HTML tables as rows; tests in indexer/tests/test_extract.py (§3.1).
 - 2026-11-07 · feat/s3.1-indexer · Implemented clean: running headers and footers, page numbers and contents entries removed, clause numbers kept; tests in indexer/tests/test_clean.py (§3.1).
+- 2026-11-07 · feat/s3.1-indexer · Implemented chunk: sections, then paragraphs, then sentences or table rows, word overlap inside a section, heading at the top of every chunk; 550 chunks, storage amplification 1.009 at 400/50 on the real corpus; tests in indexer/tests/test_chunk.py (§3.1).
