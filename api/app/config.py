@@ -45,6 +45,7 @@ class Settings:
     llm_api_key: str = field(default="", repr=False)   # from the Secret; never log it
     llm_timeout: float = 60.0        # seconds per generation call, then the canned answer
     embed_timeout: float = 10.0      # seconds to embed one question
+    history_turns: int = 3           # turns the browser sends verbatim (ADR 0002)
 
     log_level: str = "INFO"
 
@@ -66,5 +67,6 @@ def get_settings() -> Settings:
         llm_api_key=os.environ.get("LLM_API_KEY", ""),
         llm_timeout=_float("LLM_TIMEOUT_SECONDS", 60.0),
         embed_timeout=_float("EMBED_TIMEOUT_SECONDS", 10.0),
+        history_turns=_int("HISTORY_TURNS", 3),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
     )

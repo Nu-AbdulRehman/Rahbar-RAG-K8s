@@ -16,6 +16,9 @@ class StubProvider:
     name = "stub"
 
     def complete(self, prompt: Prompt) -> Completion:
+        if "answer" not in prompt.schema.get("properties", {}):
+            # The conversation-summary schema (ADR 0002): a deterministic one-liner.
+            return Completion(json.dumps({"summary": f"Asked about: {prompt.question}"}))
         reply: dict[str, object]
         if not prompt.passages:
             text = "(stub) No passages were retrieved for this question."

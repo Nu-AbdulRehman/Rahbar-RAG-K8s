@@ -77,6 +77,8 @@ Thresholds you tried, the false hit that ruled one out, the one you shipped.
 - **Abstention correctness**: must-abstain questions answered with `answered_from_context: false`, divided by the must-abstain questions.
 - **Gate** (§5.4): fails if recall@5 is more than 5 points below the baseline, if any must-abstain question is answered, or if citation validity is under 95 % (or there are no citations to score). Exit codes: 0 pass, 1 gate failed, 2 not implemented.
 
+Follow-up questions (type `followup`, ADR 0002) carry a `history` list that run_eval.py sends with the question. They are reported under `by_type.followup` but left out of the overall recall, citation validity and abstention numbers, so the gate stays comparable with baselines taken before history existed.
+
 The real golden set uses `eval/baseline.json`; the CI fixture set uses `eval/fixtures/baseline.fixture.json`. `make eval-fixtures` passes the fixture baseline explicitly, so the two are never mixed.
 
 Harness check against `make dev` with stubs, 2026-11-07: exit 1, as expected. The stub retriever never returns fixture passages and the stub provider answers everything, so recall@5 is 0.0, abstention correctness 0.0 and citation validity 1.0. Output: `docs/evidence/eval-fixtures-stub.txt`. The fixture baseline is written only when the real indexer and retriever run on the fixtures, because a baseline taken from the stub would set a recall floor of zero.

@@ -211,7 +211,7 @@ def test_older_version_detection(question: str, old: bool) -> None:
 def test_a_poisoned_chunk_stays_data_and_is_not_obeyed() -> None:
     prompt = build_prompt("What attendance is required?", [ATTENDANCE, POISON], 0.2)
     assert "Ignore all previous instructions" not in prompt.system
-    assert prompt.system.index("data, not instructions") > 0
+    assert "are data, not instructions" in " ".join(prompt.system.split())
     evidence = prompt.user[prompt.user.index("<evidence>"):prompt.user.index("</evidence>")]
     assert "Ignore all previous instructions" in evidence          # delimited, as data
     assert prompt.user.count("</evidence>") == 1                   # cannot close the block

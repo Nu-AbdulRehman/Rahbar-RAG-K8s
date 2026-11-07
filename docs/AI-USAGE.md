@@ -34,6 +34,15 @@
 - **Shaped / Wrote:** older-version detection (D17), provider interface (D18).
 - **I changed:** accepted as-is. The relevance floor default is recorded as ASSUMED (D19) until it is measured.
 
+## 2026-11-07 · feat/s3.2-conversation-history
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D1-P4b task list: write ADR 0002 before code (§3.2); store turns in localStorage with a reset (§3.2); cap and validate history and summary (§3.2); detect follow-ups with a measured false-positive check (§3.2); rewrite follow-ups for retrieval (§3.2); put conversation context before the evidence (§3.2); write the summary through the provider (§3.2); count follow-ups and summary failures (§4.8); write the tests (§3.4).
+- **I changed:** accepted as-is.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** ADR 0002 options (server sessions, sticky sessions, full transcript, LLM rewrite) and the follow-up detector (D20).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -52,3 +61,7 @@
 - 2026-11-07 · feat/s3.1-indexer · Corpus delivery (Q4): fetch.py --out DIR for the Job's emptyDir and --verify --out DIR against the committed MANIFEST; 2023 rules URL moved to https; PIPELINE.md extraction, cleaning, chunking and embedding sections (§2, §3.1).
 - 2026-11-07 · feat/s3.4-grounded-generation · ChromaRetriever: question embedded with EMBED_MODEL, top-k, superseded excluded unless asked for, cosine similarity scores, never writes (§3.2).
 - 2026-11-07 · feat/s3.4-grounded-generation · Providers (stub, ollama with format=schema, hosted with response_format), augmented prompt with delimited evidence, relevance-floor abstention, one retry then canned answer, citation check, and 23 stub-only tests each shown to fail with its guard removed (§3.4, §3.5).
+- 2026-11-07 · feat/s3.2-conversation-history · Wrote docs/adr/0002-conversation-history-in-browser.md: contract change, window and summary protocol, follow-up rule, history as untrusted data (§3.2).
+- 2026-11-07 · feat/s3.2-conversation-history · API side of ADR 0002: capped history and summary in AskRequest (422 past HISTORY_TURNS), follow-up detection and rewrite, conversation block before the evidence, summary fold with failure fallback, follow-up and summary-failure counters, 11 tests (§3.2, §4.8).
+- 2026-11-07 · feat/s3.2-conversation-history · ui/index.html keeps the conversation in localStorage (question and shown answer only, window from history_turns, summary from the API), sanitises the stored turns, adds a New conversation reset, and works when storage is blocked. Script syntax checked with node; not yet clicked through in a browser (§3.2).
+- 2026-11-07 · feat/s3.2-conversation-history · Added follow-up questions q21-q22 (type followup, with history) to eval/golden.yaml; run_eval.py sends their history and keeps them out of the gated numbers; checked end to end against make dev (follow-up counter reads 2) (§5.1, §3.2).
