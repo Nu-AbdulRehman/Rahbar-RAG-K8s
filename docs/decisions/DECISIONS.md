@@ -20,3 +20,5 @@ The resolution log. A decision the brief does not dictate gets a row here. Never
 | Q5 | Absent topic is hostel rules | Resolved | The Transport and Hostel Facilities PDF is excluded |
 | Q6 | Bonus scope deferred until the project is complete | Deferred | No ollama-incluster or BM25 until then |
 | D11 | The Aug 2023 rules PDF downloaded, so no substitute version pair is needed | Resolved | 2023-08 (superseded) vs 2026-06 |
+| D12 | OCR: tesseract through pytesseract, pages rendered by pypdfium2 | Resolved (ponytail) | Rejected: pdf2image, which needs poppler as a second renderer when pdfplumber already ships pypdfium2; easyocr, which pulls in torch (about 2 GB of image) for typed text tesseract already reads; ocrmypdf, which needs ghostscript and rewrites the PDF. Dockerfile needs tesseract-ocr only |
+| D13 | PDF text through pdfplumber, cropped to the page box, headings from font size | Resolved (ponytail) | Rejected: pypdf, which cannot crop and returns the facing page's text, so every handbook clause appears twice; pypdfium2 text, which has no per-character font size to find headings |

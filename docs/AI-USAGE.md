@@ -16,6 +16,15 @@
 - **Shaped / Wrote:** D1-P2 task list: write golden.yaml from the documents (§5.1); implement recall_at_k (§5.2); implement citation_validity (§5.3); implement summarise by type (§5.2); implement gate with exit codes (§5.4); run against make dev with stubs and commit the fixture baseline (§5.4).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s3.1-indexer
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D1-P3 task list: extract PDF, HTML and Markdown with OCR for textless pages (§3.1); clean headers, footers and contents (§3.1); chunk by section, paragraph and sentence with overlap (§3.1); embed in batches through Ollama (§3.1); store with upsert and pruning (§3.1, §4.4); invalidate the cache last (§3.3); test each stage on fixtures (§3.1); fetch the corpus into the Job with verification (§2).
+- **I changed:** accepted as-is.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** OCR engine (D12) and PDF extraction library (D13).
+- **I changed:** accepted as-is. pdf2image was dropped from indexer/requirements.txt because nothing uses it.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -25,3 +34,4 @@
 - 2026-11-07 · feat/s5-eval-harness · Wrote eval/golden.yaml: 20 questions (10 ordinary, 2 version, 3 exact, 3 abstain, 2 injection), sections taken from the document bodies (§5.1).
 - 2026-11-07 · feat/s5-eval-harness · Implemented recall_at_k, citation_validity, summarise and gate in eval/run_eval.py, with eval/test_run_eval.py; `make test` runs it and `make eval-fixtures` uses its own baseline file (§5.2-§5.4).
 - 2026-11-07 · feat/s5-eval-harness · Ran the fixture eval end to end against stubs (exit 1, as expected), recorded the evaluation method in PIPELINE.md; fixture baseline deferred until the real retriever runs (§5.4).
+- 2026-11-07 · feat/s3.1-indexer · Implemented extract: PDF cropped to the page box, headings by font size, tesseract OCR for textless pages (41 pages in the corpus), HTML tables as rows; tests in indexer/tests/test_extract.py (§3.1).
