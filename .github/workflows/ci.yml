@@ -122,7 +122,7 @@ jobs:
           path: /tmp
       - run: docker load -i /tmp/${{ matrix.image }}.tar
       - name: Trivy, fail on fixable HIGH or CRITICAL
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ matrix.image }}:${{ github.sha }}
           severity: HIGH,CRITICAL
