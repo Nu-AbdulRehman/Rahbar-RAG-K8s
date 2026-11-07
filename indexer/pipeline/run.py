@@ -3,8 +3,8 @@
     python -m pipeline.run --dummy    # week 1: three fake chunks, no model needed
     python -m pipeline.run            # the real pipeline: extract, clean, chunk, embed, store
 
-Exit code 0 means the index was written; anything else fails the Job, and
-Kubernetes retries it up to the Job's backoffLimit.
+Exit code 0 means the index was written and the semantic cache expired; anything else
+fails the Job, and Kubernetes retries it up to the Job's backoffLimit.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 from .config import IndexerSettings, get_settings
+from .invalidate import invalidate_cache
 from .models import Chunk
 
 
@@ -74,11 +75,18 @@ def run_pipeline(settings: IndexerSettings) -> int:
     if not documents:
         raise SystemExit(f"no documents found in {settings.corpus_dir}")
     all_chunks: list[Chunk] = []
+    original_words = 0
     for path, doc_version, superseded in documents:
-        doc = clean(extract(str(path), doc_version, superseded))
+        doc = clean(extract(str(path), doc_version, superseded, settings.ocr_dpi))
         pieces = chunk(doc, settings.chunk_size, settings.chunk_overlap)
-        log("chunked", source=path.name, chunks=len(pieces))
+        original_words += sum(len(p.text.split()) for p in doc.pages)
+        log("chunked", source=path.name, chunks=len(pieces),
+            ocr_pages=sum(p.ocr for p in doc.pages))
         all_chunks.extend(pieces)
+    stored_words = sum(len(c.text.split()) for c in all_chunks)
+    log("chunking done", chunks=len(all_chunks), chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
+        storage_amplification=round(stored_words / max(original_words, 1), 3))
     vectors = embed([c.text for c in all_chunks], settings)
     return store(all_chunks, vectors, settings)
 
@@ -103,7 +111,11 @@ def main() -> int:
     except NotImplementedError as exc:
         log("indexer stage not implemented yet", error=str(exc))
         return 2
-    log("indexer finished", chunks=count, seconds=round(time.perf_counter() - started, 1))
+    # Last step of every run, dummy included: the new index must not sit behind answers
+    # cached from the old one (section 3.3). A Redis failure fails the Job, which retries.
+    generation = invalidate_cache(settings)
+    log("indexer finished", chunks=count, cache_generation=generation,
+        seconds=round(time.perf_counter() - started, 1))
     return 0
 
 
