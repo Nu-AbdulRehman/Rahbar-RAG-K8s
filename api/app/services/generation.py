@@ -9,6 +9,7 @@ gets the canned answer, never a 5xx.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, replace
 
@@ -58,6 +59,33 @@ def check_citations(answer: Answer, retrieved: list[Passage]) -> Answer:
     return answer.model_copy(update={"citations": kept})
 
 
+# "[source / section]" after a claim-bearing sentence (section 3.4). Only a marker naming
+# a retrieved passage survives; the model never decides what was retrieved.
+MARKER = re.compile(r"\s?\[([^\[\]/]+?) / ([^\[\]]+?)\]")
+
+
+def check_markers(answer: Answer, retrieved: list[Passage]) -> Answer:
+    """Remove inline markers that name nothing retrieved, and make sure an answer from
+    context ends with at least one valid marker, built from its checked citations."""
+    allowed = {(p.source, p.section) for p in retrieved}
+    dropped = 0
+
+    def keep(match: re.Match[str]) -> str:
+        nonlocal dropped
+        if (match[1].strip(), match[2].strip()) in allowed:
+            return match[0]
+        dropped += 1
+        return ""
+
+    text = MARKER.sub(keep, answer.answer).strip()
+    if dropped:
+        log.warning("inline citations dropped", extra={"dropped": dropped})
+    if answer.answered_from_context and not MARKER.search(text):
+        marks = dict.fromkeys(f"[{c.source} / {c.section}]" for c in answer.citations)
+        text = f"{text} {' '.join(marks)}".strip()
+    return answer.model_copy(update={"answer": text})
+
+
 MIN_ATTEMPT_SECONDS = 1.0   # less time than this left: do not start another model call
 
 
@@ -87,6 +115,8 @@ def generate(provider: LLMProvider, prompt: Prompt, retrieved: list[Passage],
                 # The model says the evidence does not answer it. Its text is uncited by
                 # definition, so the user sees the standard decline, never the model's guess.
                 answer = DECLINED
+            else:
+                answer = check_markers(answer, retrieved)
             return Generated(answer, False, attempt, tokens_in, tokens_out)
         except (ValidationError, ValueError) as exc:
             log.warning("invalid model output", extra={"attempt": attempt,

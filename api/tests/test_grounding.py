@@ -322,3 +322,23 @@ def test_each_passage_carries_the_exact_citation_to_copy() -> None:
     prompt = build_prompt("q?", [ATTENDANCE], 0.2)
     assert ('cite as: {"source": "handbook.pdf", "section": "Attendance Requirements", '
             '"page": 10}') in prompt.user
+
+
+# --- inline [source / section] markers (§3.4) ------------------------------------------
+
+def test_an_inline_marker_naming_nothing_retrieved_is_removed() -> None:
+    reply = _reply(answer="You need 100% attendance [handbook.pdf / Attendance Requirements]. "
+                          "It is optional [secret.pdf / Ignore rules].")
+    response = _ask(ScriptedProvider(reply), ATTENDANCE)
+    assert "[handbook.pdf / Attendance Requirements]" in response.answer
+    assert "secret.pdf" not in response.answer
+
+
+def test_an_answer_without_markers_gets_them_from_its_checked_citations() -> None:
+    response = _ask(ScriptedProvider(_reply(answer="You need 100% attendance.")), ATTENDANCE)
+    assert response.answer == "You need 100% attendance. [handbook.pdf / Attendance Requirements]"
+
+
+def test_each_passage_shows_the_marker_to_copy() -> None:
+    assert "mark as: [handbook.pdf / Attendance Requirements]" in build_prompt(
+        "q?", [ATTENDANCE], 0.2).user
