@@ -1,0 +1,131 @@
+# Verification on every pull request and every push to dev (§6). Nothing here pushes an
+# image or touches a registry; publishing lives in cd.yml, behind its own needs: chain.
+name: ci
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read                       # least privilege: read the code, nothing else
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  KUBECONFORM_VERSION: "0.7.0"
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: "**/requirements*.txt"
+      - run: pip install -r api/requirements-dev.txt -r indexer/requirements-dev.txt
+      - name: ruff
+        run: ruff check api indexer eval corpus
+      - name: mypy
+        run: |
+          (cd api && mypy app)
+          (cd indexer && mypy pipeline)
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: "**/requirements*.txt"
+      # Both programs: eval/test_poisoned_chunk.py imports the api and the indexer.
+      - run: pip install -r api/requirements-dev.txt -r indexer/requirements-dev.txt
+      - name: pytest api (stubs only, coverage of the app package at least 60 %)
+        working-directory: api
+        run: pytest -q --cov=app --cov-report=term --cov-fail-under=60
+      - name: pytest indexer
+        working-directory: indexer
+        run: pytest -q
+      - name: pytest eval
+        run: pytest -q eval
+
+  manifests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: install kubeconform
+        run: |
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin kubeconform
+      - name: kustomize build | kubeconform -strict (dev and prod)
+        run: |
+          for overlay in dev prod; do
+            kubectl kustomize "k8s/overlays/$overlay" | kubeconform -strict -summary -
+          done
+      - name: no :latest, no placeholder Secret in the build
+        run: |
+          out=$(kubectl kustomize k8s/overlays/prod)
+          if grep -nE 'image: .*:latest\b|image: [^:]+$' <<<"$out"; then
+            echo "::error::an unpinned or :latest image in the prod overlay"; exit 1
+          fi
+          if grep -n 'REPLACE_ME' <<<"$out"; then
+            echo "::error::secret.placeholder.yaml is listed in a kustomization"; exit 1
+          fi
+
+  build:
+    needs: [lint, test, manifests]     # no image is built from code that failed verification
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - {image: rahbar-api, context: api, file: api/Dockerfile}
+          - {image: rahbar-indexer, context: ., file: indexer/Dockerfile}
+          - {image: rahbar-ui, context: ui, file: ui/Dockerfile}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: build ${{ matrix.image }} (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          tags: ${{ matrix.image }}:${{ github.sha }}
+          push: false
+          outputs: type=docker,dest=/tmp/${{ matrix.image }}.tar
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.image }}
+          path: /tmp/${{ matrix.image }}.tar
+          retention-days: 1
+
+  scan:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [rahbar-api, rahbar-indexer, rahbar-ui]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.image }}
+          path: /tmp
+      - run: docker load -i /tmp/${{ matrix.image }}.tar
+      - name: Trivy, fail on fixable HIGH or CRITICAL
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ matrix.image }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table

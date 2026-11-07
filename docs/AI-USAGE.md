@@ -118,6 +118,15 @@
 - **Shaped / Wrote:** where the pin is checked: once at startup and again on every /readyz (chosen, since a re-index can change the collection while the pod runs); rejected startup only (a pod started before a model change keeps serving the wrong index), and rejected checking inside every /api/ask (a per-question Chroma metadata read, and the user would get a fallback instead of the pod leaving the Service). How the api learns its own dimension: one probe embedding at startup and the length of every later vector (chosen); rejected a dimension in the ConfigMap (a second, hand-typed copy of the pin, which CLAUDE.md §1.4 forbids).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s6-ci
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D2-P6 task list: run ruff and mypy (§6); run pytest with coverage at least 60 % on the api app package, stubs only (§6); run kustomize build for both overlays through kubeconform -strict and refuse :latest (§6); build the three images without pushing (§6); scan them with Trivy and fail on fixable HIGH or CRITICAL (§6); set a least-privilege permissions block (§6).
+- **I changed:** left the e2e-eval job out: it is Dev 1's swap task, so it comes in a Dev 1 PR. Gated build on lint, test and manifests, so the checker does not read an image build as an ungated publish.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** how the scan gets the image: build once per image, export it as an artifact, scan in a needs: build job (chosen); rejected building again inside the scan job (two builds that can differ), and rejected pushing to a registry from CI to scan there (nothing may push from a PR, §6).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -166,3 +175,6 @@
 - 2026-11-07 · feat/s4.1-k8s-base · ChromaRetriever connects on first use, so a Chroma that is down at boot leaves the api alive and not ready instead of crash-looping; enableServiceLinks: false on every pod after the CHROMA_PORT service-link crash (§4.3).
 - 2026-11-07 · feat/s4.7-network-policy · k8s/base/networkpolicy.yaml: deny by default, then DNS, ui, api, chroma, redis and indexer rules; ui cannot reach chroma or redis, api can, the internet is closed except nu.edu.pk for the indexer; a full re-index and cited answers still work (docs/evidence/networkpolicy-proof.txt) (§4.7).
 - 2026-11-07 · feat/s4.4-embed-pin · Embedding-pin guard (swap task): services/pin.py compares the collection's embed_model and dimension with the api's EMBED_MODEL and embedder; /readyz returns 503 naming both and logs the conflict once; 11 tests, shown red with the readyz check removed; minikube demo in docs/evidence/embedding-pin-demo.txt (§4.3, §4.4).
+- 2026-11-07 · feat/s6-ci · Newer pinned bases (python:3.12.16-slim, nginx-unprivileged:1.30.6-alpine) plus OS upgrades: Trivy finds no fixable HIGH or CRITICAL OS package; Python pins in api/ and indexer/ still need Dev 1's bump (§6).
+- 2026-11-07 · feat/s6-ci · .github/workflows/ci.yml: lint, test (coverage at least 60 %), manifests (kubeconform -strict on dev and prod, no :latest), build (no push) and Trivy scan, read-only permissions (§6).
+- 2026-11-07 · feat/s6-ci · Dev 1: bumped fastapi to 0.162.1 with starlette 1.10.0 and pdfplumber to 0.11.10 (pdfminer.six 20260107), moved pypdf to the indexer's dev requirements; Trivy exit 0 on all three images, suites green, the real corpus chunks to the same 803 chunks with identical per-document hashes (§6).

@@ -133,7 +133,7 @@ spec:
             matchLabels: {app: indexer}
       ports:
         - {protocol: TCP, port: 8000}
-  egress: []                           # Chroma calls nothing
+  # No egress rule: with Egress in policyTypes, Chroma can call nothing.
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -151,4 +151,4 @@ spec:
             matchLabels: {app: indexer}  # the last step of a run bumps the cache generation
       ports:
         - {protocol: TCP, port: 6379}
-  egress: []                           # Redis calls nothing
+  # No egress rule: with Egress in policyTypes, Redis can call nothing.

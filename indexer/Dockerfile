@@ -2,7 +2,7 @@
 # repository root (`docker build -f indexer/Dockerfile .`), because the Job fetches the
 # corpus at start-up with corpus/fetch.py and checks it against the committed
 # corpus/MANIFEST.md (decision Q4, docs/PIPELINE.md). The PDFs never enter the image.
-FROM python:3.12.11-slim
+FROM python:3.12.16-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -11,8 +11,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HOME=/tmp \
     CORPUS_DIR=/corpus
 
-# OCR for the scanned PDFs (D12). pypdfium2 renders the pages, so no poppler.
+# OCR for the scanned PDFs (D12). pypdfium2 renders the pages, so no poppler. The OS
+# upgrade picks up Debian security fixes newer than the base tag (Trivy, §6).
 RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
  && apt-get install -y --no-install-recommends tesseract-ocr \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin rahbar
