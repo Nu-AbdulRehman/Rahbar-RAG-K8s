@@ -1,0 +1,25 @@
+# Delivery evidence (§6, §8 "What to submit"), recorded from the GitHub and Docker Hub APIs
+
+cd.yml run: https://github.com/Nu-AbdulRehman/Rahbar-RAG-K8s/actions/runs/42400938418
+  event push on main, commit 84d0bfd4e1f2d52fa7fcf17bcfc08c796047883f, conclusion success
+  started 2026-11-07T18:22:09Z, updated 2026-11-07T18:25:33Z
+  jobs:
+    test                                               success   2026-11-07T18:22:11Z -> 2026-11-07T18:22:51Z
+    build-push (rahbar-api, api, api/Dockerfile)       success   2026-11-07T18:22:54Z -> 2026-11-07T18:23:25Z
+    build-push (rahbar-ui, ui, ui/Dockerfile)          success   2026-11-07T18:22:54Z -> 2026-11-07T18:23:09Z
+    build-push (rahbar-indexer, ., indexer/Dockerfile) success   2026-11-07T18:22:54Z -> 2026-11-07T18:23:21Z
+    deploy                                             success   2026-11-07T18:23:27Z -> 2026-11-07T18:25:32Z
+
+Docker Hub images (the SHA tag cd.yml pushed and deployed):
+  docker.io/nuabdulrehman/rahbar-api:84d0bfd4e1f2d52fa7fcf17bcfc08c796047883f
+    digest sha256:e7865fc8fec665be9e4ee6cafc5e1e4375a02fa7fb9b57c8f11aa9e2925a3f1d, pushed 2026-11-07T18:23:18.479939Z
+    https://hub.docker.com/r/nuabdulrehman/rahbar-api/tags
+  docker.io/nuabdulrehman/rahbar-indexer:84d0bfd4e1f2d52fa7fcf17bcfc08c796047883f
+    digest sha256:ed9f5d64e741265d76eac01afe4a48bb8e2c909f3a2eac1194fe9512be18d872, pushed 2026-11-07T18:23:14.154768Z
+    https://hub.docker.com/r/nuabdulrehman/rahbar-indexer/tags
+  docker.io/nuabdulrehman/rahbar-ui:84d0bfd4e1f2d52fa7fcf17bcfc08c796047883f
+    digest sha256:8ef56f811df1f7a6df5ffe2c9988d6810bcc1d68ab70934811f03252f6f9fca2, pushed 2026-11-07T18:23:03.96609Z
+    https://hub.docker.com/r/nuabdulrehman/rahbar-ui/tags
+
+The earlier tags :460d053b6d44... come from the first cd.yml run, whose deploy failed on the
+image pin (docs/failure-log.md); nothing deploys them. What is running is the SHA above.

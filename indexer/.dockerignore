@@ -1,0 +1,21 @@
+# The indexer image is built from the REPOSITORY ROOT (`docker build -f indexer/Dockerfile .`,
+# see make images, ci.yml and cd.yml), because the Job needs corpus/fetch.py, sources.yaml,
+# MANIFEST.md and eval/fixtures. Docker reads the ignore file of the build context, so the
+# one that applies is /.dockerignore, an allowlist of exactly what the Dockerfile copies.
+#
+# This file only matters if someone builds with indexer/ as the context. The Dockerfile then
+# fails at its first COPY of corpus/, which is the right outcome. Until it does, it keeps the
+# same junk out of that context.
+.git
+__pycache__
+*.pyc
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+tests
+requirements-dev.txt
+corpus
+.env
+.env.*
