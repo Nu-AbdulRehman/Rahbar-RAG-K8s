@@ -147,6 +147,15 @@
 - **Shaped / Wrote:** Dev 1 close-out list: re-index on minikube with the merged indexer image (§3.1); run eval/run_eval.py on golden.yaml through the Ingress (§5.3); compare recall@5, citation validity and abstention with the laptop baseline (§5.4); hand any changed value to the ConfigMap with its source (§4.1); cite the pin guard's file:line in engineering note Q6 (§7); update PIPELINE.md's pin paragraph now the guard exists (§4.4).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · ci/s6-e2e-eval
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** swap-task list (Dev 1 into the platform): create a kind cluster in ci.yml (§6); load the images the build job made for this commit (§6); run Ollama on the runner with nomic-embed-text only and the stub LLM (Q3); index eval/fixtures with the indexer Job (D5); wait with rollout status and kubectl wait, never sleep (§6); run eval/run_eval.py on golden.fixture.yaml against the fixture baseline and fail the job on the gate (§5.4); keep the real baseline out of it (D5).
+- **I changed:** accepted as-is.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** how kind pods reach Ollama: Ollama on the runner, reached through the kind network gateway, with the NetworkPolicy ipBlock patched to that address (chosen); rejected Ollama as a pod in the kind cluster (a model pull and a second image inside the job, and a different path from minikube's host Ollama); rejected hostNetwork for the api (it would bypass the NetworkPolicy the job should exercise). How run_eval.py reaches the api: kubectl port-forward to svc/api (chosen); rejected installing ingress-nginx in this job (a minute more per run, and cd.yml's smoke test already goes through the Ingress).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -203,3 +212,4 @@
 - 2026-11-07 · feat/s6-ci · Dev 1: bumped fastapi to 0.162.1 with starlette 1.10.0 and pdfplumber to 0.11.10 (pdfminer.six 20260107), moved pypdf to the indexer's dev requirements; Trivy exit 0 on all three images, suites green, the real corpus chunks to the same 803 chunks with identical per-document hashes (§6).
 - 2026-11-07 · feat/s5.2-cluster-remeasure · Re-indexed on minikube with the merged indexer (803 chunks) and ran eval/golden.yaml through the Ingress: recall@5 0.938, citation validity 1.00, abstention 1.00, same as the laptop, gate passed, ConfigMap unchanged (docs/evidence/eval-minikube.txt) (§5.2-§5.4).
 - 2026-11-07 · feat/s5.2-cluster-remeasure · Engineering note Q6 rewritten around the merged pin guard with file:line references and the minikube demonstration; PIPELINE.md's pin paragraph updated (§4.4, §7).
+- 2026-11-07 · ci/s6-e2e-eval · e2e-eval job in ci.yml (swap task) and k8s/overlays/e2e: kind, this commit's images, Ollama on the runner (nomic-embed-text), stub LLM, fixtures indexed by the Job, run_eval.py gated on the fixture baseline; rehearsed on minikube: 11 chunks, pin ok, gate passed (§5.4, §6).
