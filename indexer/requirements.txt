@@ -4,8 +4,10 @@ chromadb-client==1.0.12
 posthog==5.4.0
 httpx==0.28.1
 pyyaml==6.0.2
-# Extraction. OCR also needs system packages in your Dockerfile: tesseract-ocr, poppler-utils.
+# The last step of a run bumps the semantic cache generation (section 3.3).
+redis==5.2.1
+# Extraction. OCR also needs the tesseract-ocr system package in the Dockerfile. Pages are
+# rendered with pypdfium2, which pdfplumber already installs, so poppler is not needed.
 pdfplumber==0.11.6
 pypdf==5.4.0
 pytesseract==0.3.13
-pdf2image==1.17.0

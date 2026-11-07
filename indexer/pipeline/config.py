@@ -1,4 +1,7 @@
-"""Indexer configuration, from the same ConfigMap the API reads (section 4.1)."""
+"""Indexer configuration, from the same ConfigMap the API reads (section 4.1).
+
+The only module in the indexer that reads the environment.
+"""
 
 from __future__ import annotations
 
@@ -13,9 +16,14 @@ class IndexerSettings:
     chroma_port: int
     collection: str
     corpus_dir: str         # where the documents and _index.json sit inside the Job's pod
-    chunk_size: int
-    chunk_overlap: int
+    chunk_size: int         # in words; see docs/PIPELINE.md, "Chunking"
+    chunk_overlap: int      # in words
     ollama_url: str
+    embed_batch_size: int = 32      # texts per POST /api/embed
+    embed_timeout: float = 120.0    # seconds per embedding request
+    ocr_dpi: int = 300              # render resolution for pages with no text layer
+    redis_host: str = "redis"       # the last step bumps the cache generation (3.3)
+    redis_port: int = 6379
 
 
 def get_settings() -> IndexerSettings:
@@ -28,4 +36,9 @@ def get_settings() -> IndexerSettings:
         chunk_size=int(os.environ.get("CHUNK_SIZE", 400)),
         chunk_overlap=int(os.environ.get("CHUNK_OVERLAP", 50)),
         ollama_url=os.environ.get("OLLAMA_URL", "http://host.minikube.internal:11434"),
+        embed_batch_size=int(os.environ.get("EMBED_BATCH_SIZE", 32)),
+        embed_timeout=float(os.environ.get("EMBED_TIMEOUT_SECONDS", 120)),
+        ocr_dpi=int(os.environ.get("OCR_DPI", 300)),
+        redis_host=os.environ.get("REDIS_HOST", "redis"),
+        redis_port=int(os.environ.get("REDIS_PORT", 6379)),
     )
