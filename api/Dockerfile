@@ -1,5 +1,5 @@
 # The api image (§4.7, §6). Build context: api/. Reads the index, never writes it.
-FROM python:3.12.11-slim
+FROM python:3.12.16-slim
 
 # No .pyc writes (the root filesystem is read-only on the cluster), unbuffered logs, and a
 # HOME under /tmp, the one writable path (an emptyDir in the Deployment).
@@ -10,6 +10,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HOME=/tmp
 
 WORKDIR /app
+# The OS upgrade picks up Debian security fixes newer than the base tag (Trivy, §6).
+RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
 RUN pip install -r requirements.txt \
  && useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin rahbar
