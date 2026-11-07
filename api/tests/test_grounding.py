@@ -187,6 +187,26 @@ def test_superseded_chunks_are_excluded_by_default_and_scores_are_similarity() -
     assert chroma.col.where[-1] is None
 
 
+def test_a_chroma_that_is_down_at_boot_leaves_the_api_alive_and_not_ready(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """HttpClient contacts the server when it is built. Built at startup, a Chroma that is
+    still booting crash-looped every api pod on minikube instead of failing readiness."""
+    import chromadb
+
+    def refuse(*args: Any, **kwargs: Any) -> Any:
+        raise ValueError("Could not connect to a Chroma server. Are you sure it is running?")
+
+    monkeypatch.setattr(chromadb, "HttpClient", refuse)
+    monkeypatch.setenv("RETRIEVER", "chroma")
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
+    from app.main import app
+
+    with TestClient(app) as c:                       # startup must not raise
+        assert c.get("/healthz").status_code == 200
+        r = c.get("/readyz")
+        assert r.status_code == 503 and r.json()["checks"]["chroma"].startswith("unreachable")
+
+
 def test_the_service_asks_for_old_versions_only_when_the_question_does() -> None:
     retriever = FixedRetriever(ATTENDANCE)
     answer_question("What attendance is required?", retriever, ScriptedProvider(_reply()),
