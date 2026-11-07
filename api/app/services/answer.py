@@ -18,6 +18,7 @@ import logging
 
 from ..config import Settings
 from ..logjson import request_id_var
+from ..providers.cache.semantic import NoCache, SemanticCache
 from ..providers.llm.base import LLMProvider
 from ..retrieval.base import Retriever
 from ..routes import metrics
@@ -40,14 +41,27 @@ ABSTAIN = Answer(
 def answer_question(
     question: str, retriever: Retriever, provider: LLMProvider, settings: Settings,
     history: list[Turn] | None = None, summary: str = "",
+    cache: SemanticCache | NoCache | None = None,
 ) -> AskResponse:
     history = history or []
+    cache = cache or NoCache()
     follow_up = is_follow_up(question, history)
     query = retrieval_query(question, history) if follow_up else question
     if follow_up:
         metrics.FOLLOWUPS.inc()
     log.debug("conversation", extra={"history": [t.model_dump() for t in history],
                                      "summary": summary, "retrieval_query": query})
+
+    # Follow-ups skip the cache both ways: their meaning depends on the conversation.
+    # Standalone questions are keyed on the question alone, never on history (ADR 0002).
+    if follow_up or not cache.enabled:
+        metrics.CACHE_LOOKUPS.labels(result="skipped").inc()
+    else:
+        hit, similarity = cache.lookup(question)
+        metrics.CACHE_LOOKUPS.labels(result="hit" if hit else "miss").inc()
+        if hit:
+            return _cached(hit, similarity, provider, summary, history, settings)
+
     include_old = asks_about_older_version(query)
     abstained = False
     try:
@@ -70,6 +84,24 @@ def answer_question(
         metrics.SUMMARY_FAILURES.inc()
 
     answer = result.answer
+    # Never cache a follow-up, an abstention, an out-of-scope answer, a fallback, or
+    # anything without a valid citation: a cached mistake is served to everyone (3.3).
+    safe = (not follow_up and not abstained and not result.fallback
+            and answer.answered_from_context and bool(answer.citations))
+    response = AskResponse(
+        request_id=request_id_var.get(),
+        answer=answer.answer,                  # reasoning is never sent to the user
+        citations=answer.citations,
+        answered_from_context=answer.answered_from_context,
+        confidence=answer.confidence,
+        retrieved=[_ref(p) for p in passages],
+        provider=provider.name,
+        summary=new_summary,
+        history_turns=settings.history_turns,
+    )
+    stored = safe and cache.store(question, response.model_dump(include=CACHED_FIELDS))
+    if stored:
+        metrics.CACHE_STORES.inc()
     log.info(
         "answered",
         extra={
@@ -88,19 +120,33 @@ def answer_question(
             "tokens_in": result.tokens_in,
             "tokens_out": result.tokens_out,
             "summary_failed": summary_failed,
+            "cached": False,
+            "cache_stored": stored,
         },
     )
-    return AskResponse(
-        request_id=request_id_var.get(),
-        answer=answer.answer,                  # reasoning is never sent to the user
-        citations=answer.citations,
-        answered_from_context=answer.answered_from_context,
-        confidence=answer.confidence,
-        retrieved=[_ref(p) for p in passages],
-        provider=provider.name,
-        summary=new_summary,
-        history_turns=settings.history_turns,
-    )
+    return response
+
+
+# What a cache entry holds: the answer, never the request id or the conversation.
+CACHED_FIELDS = {"answer", "citations", "answered_from_context", "confidence", "retrieved",
+                 "provider"}
+
+
+def _cached(hit: dict, similarity: float, provider: LLMProvider, summary: str,
+            history: list[Turn], settings: Settings) -> AskResponse:
+    new_summary, summary_failed = updated_summary(provider, summary, history,
+                                                  settings.history_turns, settings.temperature)
+    if summary_failed:
+        metrics.SUMMARY_FAILURES.inc()
+    response = AskResponse(**hit, request_id=request_id_var.get(), summary=new_summary,
+                           history_turns=settings.history_turns, cached=True)
+    log.info("answered", extra={
+        "cached": True, "cache_similarity": similarity, "top_k": settings.top_k,
+        "chunk_ids": [r.chunk_id for r in response.retrieved],
+        "scores": [r.score for r in response.retrieved], "abstained": False,
+        "follow_up": False, "answered_from_context": response.answered_from_context,
+    })
+    return response
 
 
 def _ref(p: Passage) -> RetrievedRef:

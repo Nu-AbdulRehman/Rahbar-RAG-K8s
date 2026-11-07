@@ -16,4 +16,4 @@ def ask(body: AskRequest, request: Request) -> AskResponse:
     if len(body.history) > state.settings.history_turns:
         raise HTTPException(422, f"history holds at most {state.settings.history_turns} turns")
     return answer_question(body.question, state.retriever, state.provider, state.settings,
-                           history=body.history, summary=body.summary)
+                           history=body.history, summary=body.summary, cache=state.cache)

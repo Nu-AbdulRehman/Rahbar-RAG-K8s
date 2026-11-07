@@ -18,7 +18,9 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
 from .logjson import configure_logging, request_id_var
+from .providers.cache import get_cache
 from .providers.llm import get_provider
+from .providers.llm.embed import OllamaEmbedder
 from .retrieval import get_retriever
 from .routes import ask, health, metrics
 
@@ -30,15 +32,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
     app.state.settings = settings
-    app.state.retriever = get_retriever(settings)
+    # One embedder for the retriever and the cache, so a question is embedded once.
+    embedder = OllamaEmbedder(settings)
+    app.state.retriever = get_retriever(settings, embedder)
     app.state.provider = get_provider(settings)
+    app.state.cache = get_cache(settings, embedder)
     # STARTER-TODO(4.4): compare the collection's embedding-model metadata with
     # settings.embed_model here, and make /readyz fail on a mismatch.
     # This process only reads the index. The indexer Job writes it.
     log.info(
         "api started",
         extra={"retriever": settings.retriever, "llm_provider": settings.llm_provider,
-               "embed_model": settings.embed_model, "top_k": settings.top_k},
+               "embed_model": settings.embed_model, "top_k": settings.top_k,
+               "cache": settings.cache},
     )
     yield
 

@@ -81,6 +81,7 @@ class AskResponse(BaseModel):
     # ADR 0002: the conversation summary to send back next time, and the window size.
     summary: str = ""
     history_turns: int = 3
+    cached: bool = False             # served from the semantic cache (section 3.3)
 
 
 class Summary(BaseModel):

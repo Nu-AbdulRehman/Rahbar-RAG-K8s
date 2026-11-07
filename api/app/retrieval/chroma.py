@@ -32,6 +32,9 @@ class ChromaRetriever:
         it under the same name, and a cached handle would point at the deleted one."""
         return self.client.get_collection(self.settings.collection)
 
+    def count(self) -> int:
+        return int(self.collection().count())
+
     def retrieve(self, question: str, k: int, include_superseded: bool = False) -> list[Passage]:
         vector = self.embedder.embed(question)          # the pinned EMBED_MODEL
         where = None if include_superseded else {"superseded": False}

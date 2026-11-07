@@ -14,3 +14,7 @@ class Retriever(Protocol):
         """Return up to k passages, best first. Superseded documents are left out unless
         include_superseded is True (section 3.2 step 4)."""
         ...
+
+    def count(self) -> int:
+        """Chunks in the index; raises if the store or the collection is unreachable."""
+        ...
