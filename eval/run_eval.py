@@ -195,7 +195,7 @@ def main() -> int:
         print(f"\nnot implemented yet: {exc}")
         return 2
 
-    results["golden"] = str(args.golden)
+    results["golden"] = args.golden.name     # no local paths in committed results
     results["questions"] = len(rows)
     args.out.write_text(json.dumps(results, indent=2), encoding="utf-8")
     print(f"\nresults written to {args.out}")

@@ -57,6 +57,11 @@
 - **Shaped / Wrote:** D1-P6 task list: log one JSON line per request with top_k, chunk ids, scores and abstention (§4.8); log the raw prompt at DEBUG only (§4.8); add retrieval and generation latency histograms (§4.8); add the cache hit ratio, abstention and fallback counters (§4.8); add tokens in and out per request (§4.8); test the line and the metric names (§4.8).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s5.2-measure-and-tune
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D1-P7 task list: install Ollama with nomic-embed-text and llama3.2:3b (user approved) (§3.5); measure at least three chunk configs for recall@5 (§3.1); choose the relevance floor from the abstain and answerable scores (§3.4); choose the lowest cache threshold with zero false hits (§3.3); write the real and fixture baselines (§5.4); hand the ConfigMap values over with their sources (§4.1).
+- **I changed:** accepted as-is. Measured on this laptop (local chromadb 1.0.12 and Ollama on the GPU), not on minikube, because the cluster is Dev 2's and not up yet; the values carry over because the models and the code are the same.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -83,3 +88,4 @@
 - 2026-11-07 · feat/s3.3-semantic-cache · Semantic cache in api/app/providers/cache/ (cosine over the current generation, CACHE_THRESHOLD from config, CACHE=redis|none), wired into the query path with the never-cache rules and a cached flag for the UI chip; /readyz reports Chroma (non-empty) and Redis with 503 naming the failure; 12 tests, each guard shown to fail when removed (§3.3, §4.3).
 - 2026-11-07 · feat/s4.8-observability · Added rahbar_retrieval_seconds, rahbar_generation_seconds, rahbar_tokens_per_request{direction}, rahbar_abstentions_total, rahbar_fallbacks_total{reason} and rahbar_cache_hit_ratio, with bounded labels only; the raw prompt is logged at DEBUG; tests check the request line and every metric name (§4.8).
 - 2026-11-07 · feat/s4.8-observability · Pinned pytest-cov for the CI coverage gate; wrote docs/handover/HANDOVER-feat-s4.8-observability.md (branch stack, blocked items, notes for Dev 2) (§6).
+- 2026-11-07 · feat/s5.2-measure-and-tune · The first real llama3.2:3b run showed the model miscopying citation fields and saying answered_from_context=false next to a correct answer: evidence now ends with a literal "cite as" JSON line, and a not-from-context reply always shows the standard decline; invalid outputs went from 4 to 0 (§3.4).

@@ -307,3 +307,18 @@ def test_the_question_is_embedded_with_the_pinned_model() -> None:
     vector = OllamaEmbedder(Settings(embed_model="pinned"), client).embed("q?")
     assert vector == [0.5, 0.25]
     assert json.loads(seen[0].content) == {"model": "pinned", "input": ["q?"]}
+
+
+def test_a_not_from_context_reply_never_shows_the_models_own_text() -> None:
+    from app.services.generation import DECLINED
+
+    guess = _reply(answer="Probably 75%, as at most universities.", citations=[],
+                   answered_from_context=False)
+    response = _ask(ScriptedProvider(guess), ATTENDANCE)
+    assert response.answer == DECLINED.answer and response.citations == []
+
+
+def test_each_passage_carries_the_exact_citation_to_copy() -> None:
+    prompt = build_prompt("q?", [ATTENDANCE], 0.2)
+    assert ('cite as: {"source": "handbook.pdf", "section": "Attendance Requirements", '
+            '"page": 10}') in prompt.user
