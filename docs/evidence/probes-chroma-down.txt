@@ -1,0 +1,64 @@
+# Q2 experiment, 2026-11-07T14:49:57Z, minikube, 3 api replicas, chroma scaled to 0 for 90 s
+# ask = HTTP status of one /api/ask through the Ingress; per pod: READY and RESTARTS
+
+## A: probes as shipped (liveness /healthz, readiness /readyz)
+t+16s ask=000  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+t+39s ask=000  2dj8v 0/1 r=0 | gkjzc 0/1 r=0 | t5br4 0/1 r=0 | 
+t+48s ask=503  2dj8v 0/1 r=0 | gkjzc 0/1 r=0 | t5br4 0/1 r=0 | 
+t+56s ask=503  2dj8v 0/1 r=0 | gkjzc 0/1 r=0 | t5br4 0/1 r=0 | 
+t+64s ask=503  2dj8v 0/1 r=0 | gkjzc 0/1 r=0 | t5br4 0/1 r=0 | 
+t+73s ask=503  2dj8v 0/1 r=0 | gkjzc 0/1 r=0 | t5br4 0/1 r=0 | 
+t+81s ask=503  2dj8v 0/1 r=0 | gkjzc 0/1 r=0 | t5br4 0/1 r=0 | 
+-- chroma back
+t+90s ask=503  2dj8v 0/1 r=0 | gkjzc 0/1 r=0 | t5br4 0/1 r=0 | 
+t+106s ask=200  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+t+114s ask=200  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+t+123s ask=200  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+t+131s ask=200  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+t+140s ask=200  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+t+148s ask=200  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+t+157s ask=200  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+t+165s ask=200  2dj8v 1/1 r=0 | gkjzc 1/1 r=0 | t5br4 1/1 r=0 | 
+
+## B: probes swapped (liveness /readyz, readiness /healthz)
+t+1s ask=200  t5br4 1/1 r=0 | g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+9s ask=200  g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+18s ask=200  g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+26s ask=200  g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+35s ask=200  g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+43s ask=200  g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+52s ask=200  g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+60s ask=200  g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+69s ask=502  g98dk 1/1 r=0 | nk2dw 1/1 r=0 | vtstr 1/1 r=0 | 
+t+77s ask=502  g98dk 1/1 r=0 | nk2dw 0/1 r=1 | vtstr 1/1 r=0 | 
+t+86s ask=503  g98dk 0/1 r=1 | nk2dw 0/1 r=1 | vtstr 0/1 r=0 | 
+-- chroma back
+t+94s ask=503  g98dk 0/1 r=1 | nk2dw 0/1 r=1 | vtstr 0/1 r=1 | 
+t+103s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+t+111s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+t+120s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+t+129s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+t+137s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+t+146s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+t+154s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+t+163s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+t+171s ask=200  g98dk 1/1 r=1 | nk2dw 1/1 r=1 | vtstr 1/1 r=1 | 
+
+-- restore
+Waiting for deployment "api" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+deployment "api" successfully rolled out
+NAME                   READY   STATUS        RESTARTS        AGE
+api-5ffc457bf8-68k4q   1/1     Running       0               7s
+api-5ffc457bf8-rlxxk   1/1     Running       0               24s
+api-5ffc457bf8-zdwkk   1/1     Running       0               15s
+api-7d6bbccc66-nk2dw   1/1     Terminating   1 (2m10s ago)   3m42s
+api-7d6bbccc66-vtstr   0/1     Completed     1 (119s ago)    3m50s
