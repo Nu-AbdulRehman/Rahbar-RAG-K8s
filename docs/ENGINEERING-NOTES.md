@@ -19,7 +19,7 @@ startup is past the startup probe's 60 s budget (30 x 2 s, api.yaml:40-43), so t
 would kill them anyway. Every rollout, eviction or crash would start the race again.
 
 **What prevents it:** the Job `indexer` (k8s/base/indexer.yaml:7) is the only writer. It
-runs one pod (`restartPolicy: OnFailure`, line 18, `backoffLimit: 2`, line 12), and the
+runs one pod (`restartPolicy: OnFailure`, line 18, `backoffLimit: 6`, line 12), and the
 weekly CronJob that repeats it has `concurrencyPolicy: Forbid` (line 68), so there are
 never two writers. Chroma itself is one StatefulSet pod with its own claim from
 `volumeClaimTemplates` and `ReadWriteOnce` (k8s/base/chroma.yaml:59-63). The api only
@@ -97,7 +97,7 @@ SIGKILL when the container passes its memory limit. We measured it
 after 85 s with `reason: OOMKilled, exitCode: 137`, during OCR. Because the run had not
 reached the store step, Chroma still held the previous 803 chunks: a failed index run
 never leaves a half-written index. With the real Job's `restartPolicy: OnFailure` it
-would have retried twice (`backoffLimit: 2`) and failed the same way each time, because
+would have retried six times (`backoffLimit: 6`) and failed the same way each time, because
 the input does not change; the fix is the limit, not the retries. CPU is different: above
 the 2-CPU limit the indexer is throttled and only slower, never killed.
 
