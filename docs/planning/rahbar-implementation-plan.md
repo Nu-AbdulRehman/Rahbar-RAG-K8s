@@ -257,7 +257,7 @@ All handoffs travel as PRs into dev, never as direct pushes; the receiving dev r
 
 ### A phase is done when
 
-1. Every item on its caveman list is true and its STARTER-TODO markers are gone.
+1. Every item on its caveman list is true and its starter-kit TODO markers are gone.
 2. make test and make lint are green, coverage ≥ 60 %, make check shows no new violations, manifests pass kubeconform.
 3. Any behaviour the brief asks to demonstrate has evidence in docs/evidence/.
 4. Every tuned number has its measurement table in PIPELINE.md.
@@ -265,7 +265,7 @@ All handoffs travel as PRs into dev, never as direct pushes; the receiving dev r
 
 ### The project is done when (shared close-out)
 
-- [ ] grep -rn STARTER-TODO returns nothing; python scripts/check\_submission.py is clean
+- [ ] grep -rn 'STARTER-[T]ODO' returns nothing; python scripts/check\_submission.py is clean
 - [ ] A fresh make cluster + README apply order + indexer Job + make ask works from a clean clone
 - [ ] eval/results.json and eval/baseline.json committed; abstention correctness 100 %, citation validity ≥ 95 %
 - [ ] Successful cd.yml run link and Docker Hub SHA tags recorded

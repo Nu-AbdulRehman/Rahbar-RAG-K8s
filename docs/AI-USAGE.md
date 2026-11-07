@@ -156,6 +156,11 @@
 - **Shaped / Wrote:** how kind pods reach Ollama: Ollama on the runner, reached through the kind network gateway, with the NetworkPolicy ipBlock patched to that address (chosen); rejected Ollama as a pod in the kind cluster (a model pull and a second image inside the job, and a different path from minikube's host Ollama); rejected hostNetwork for the api (it would bypass the NetworkPolicy the job should exercise). How run_eval.py reaches the api: kubectl port-forward to svc/api (chosen); rejected installing ingress-nginx in this job (a minute more per run, and cd.yml's smoke test already goes through the Ingress).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · fix/s4.2-indexer-retries
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** Dev 2 close-out list: raise the indexer Job and CronJob backoffLimit so a fresh cluster's start-up race cannot fail the first index (§4.2); run the README apply order from a clean clone on a new minikube (§7, -5); write engineering note Q7 from docs/failure-log.md (§7); reword the rules files so no literal starter marker remains (§0 of the checker); hand the owner-only steps (branch protection, Docker Hub secrets) to the user (§6).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -214,3 +219,6 @@
 - 2026-11-07 · feat/s5.2-cluster-remeasure · Engineering note Q6 rewritten around the merged pin guard with file:line references and the minikube demonstration; PIPELINE.md's pin paragraph updated (§4.4, §7).
 - 2026-11-07 · ci/s6-e2e-eval · e2e-eval job in ci.yml (swap task) and k8s/overlays/e2e: kind, this commit's images, Ollama on the runner (nomic-embed-text), stub LLM, fixtures indexed by the Job, run_eval.py gated on the fixture baseline; rehearsed on minikube: 11 chunks, pin ok, gate passed (§5.4, §6).
 - 2026-11-07 · ci/s6-e2e-eval · First GitHub run of e2e-eval failed: the fixture Job beat Redis to start-up and ran out of retries at backoffLimit 2; the e2e overlay now allows 6, verified with Redis held down for 40 s (failure-log) (§6).
+- 2026-11-07 · fix/s4.2-indexer-retries · backoffLimit 6 on the indexer Job and the reindex CronJob, so Chroma or Redis still starting on a fresh cluster costs retries, not a failed first index; ADR 0001 and notes Q1 and Q4 updated (§4.2).
+- 2026-11-07 · fix/s4.2-indexer-retries · Engineering note Q7 from docs/failure-log.md (the first e2e-eval failure, with both wrong theories), and the rules and plan files reworded so no literal starter marker is left; the last marker in ENGINEERING-NOTES.md removed (§7).
+- 2026-11-07 · fix/s4.2-indexer-retries · README apply order run from a clean clone on a new minikube: works, 763 s to a cited answer (docs/evidence/readme-clean-clone.txt); it exposed the startup pin check blocking /healthz while Chroma had no endpoints, now run in a thread with a test shown red without it (§4.3, §4.4, §7).

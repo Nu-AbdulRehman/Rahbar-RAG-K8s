@@ -7,6 +7,7 @@ Run in the container:     uvicorn app.main:app --host 0.0.0.0 --port 8000
 from __future__ import annotations
 
 import logging
+import threading
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -42,7 +43,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.pin_conflict = None
     # The embedding pin (section 4.4), checked once here and again on every /readyz, since
     # a re-index can change it while the pod runs. This process only reads the index.
-    _check_pin_at_startup(app)
+    # In a thread: on a fresh cluster the Chroma Service has no endpoints yet and the
+    # connect hangs past the 60 s startup probe, which would kill the pod before it
+    # serves /healthz (docs/failure-log.md). /readyz stays 503 until the check passes.
+    threading.Thread(target=_check_pin_at_startup, args=(app,), daemon=True,
+                     name="pin-check").start()
     log.info(
         "api started",
         extra={"retriever": settings.retriever, "llm_provider": settings.llm_provider,

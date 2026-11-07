@@ -9,7 +9,7 @@ metadata:
   name: indexer
   labels: {app: indexer}
 spec:
-  backoffLimit: 2
+  backoffLimit: 6                      # back-off 10+20+40+80+160 s: covers chroma and redis still starting on a fresh cluster (failure-log)
   activeDeadlineSeconds: 3600
   template:
     metadata:
@@ -70,7 +70,7 @@ spec:
   failedJobsHistoryLimit: 2
   jobTemplate:
     spec:
-      backoffLimit: 2
+      backoffLimit: 6
       activeDeadlineSeconds: 3600
       template:
         metadata:

@@ -195,7 +195,7 @@ worth more than most features. Check this list before saying any phase is done:
 | Commits pushed directly to `main` | −4 | §1.2 |
 
 `make check` (`scripts/check_submission.py`) catches the mechanical ones. It is a lint, not a
-grader. Its section **0 · starter kit** fails until every `STARTER-TODO` and
+grader. Its section **0 · starter kit** fails until every starter-kit TODO and
 `raise NotImplementedError` is gone. If you add code that could trip a deduction the
 checker doesn't detect, add a test or a CI step that does, in the same PR. Don't rely on
 memory.
@@ -292,7 +292,7 @@ and you use it whenever you need requirements or details from the user.
 
 | Skill | Status | Fires when | Input | Must produce | Fails if |
 |---|---|---|---|---|---|
-| **`caveman`** | Mandatory | Start of every phase, before writing any code | The brief sections the phase delivers (`§N.N`), plus the matching `STARTER-TODO(section)` markers (`grep -rn STARTER-TODO`) | A stripped task list: nouns and verbs only, every item completable in ≤90 min, each tagged with its `§N.N` | Any line contains "consider", "maybe", "as needed"; fewer than 5 items; a line doesn't start with a verb |
+| **`caveman`** | Mandatory | Start of every phase, before writing any code | The brief sections the phase delivers (`§N.N`), plus the matching starter-kit `TODO(section)` markers (`grep -rn 'STARTER-[T]ODO'`) | A stripped task list: nouns and verbs only, every item completable in ≤90 min, each tagged with its `§N.N` | Any line contains "consider", "maybe", "as needed"; fewer than 5 items; a line doesn't start with a verb |
 | **`ponytail`** | Mandatory | The moment a design decision has ≥2 defensible answers, mid-phase, whenever it happens (e.g. cache store, how the corpus reaches the Job, OCR engine, chunk unit) | The decision, plus the constraining brief sections and `DECISIONS.md` rows | A decision-record stub, which becomes a `DECISIONS.md` row, an ADR, or an `ENGINEERING-NOTES.md` paragraph | Fewer than 2 rejected alternatives named, or a rejection with no reason given |
 | **`grilling`** | Recommended | Whenever a requirement, preference, or detail is needed from the user and the brief, STARTER.md, and `DECISIONS.md` don't already answer it (corpus choice, provider mode, ownership, an ambiguity in the brief, what "done" means for a task) | The open question(s) and what's already known | Answers from the user, recorded as `DECISIONS.md` rows before the code that depends on them | Not applicable as a gate. Misused if it asks something the brief or the repo already answers, or if an answer is acted on without being recorded |
 

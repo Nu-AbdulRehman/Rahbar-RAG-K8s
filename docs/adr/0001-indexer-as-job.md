@@ -30,7 +30,7 @@ against one Chroma volume, so that design fails in four ways:
 
 ## Decision
 A Kubernetes Job is the only writer to Chroma: `indexer` in k8s/base/indexer.yaml:7, with
-`restartPolicy: OnFailure` (line 18) and `backoffLimit: 2` (line 12). A weekly CronJob,
+`restartPolicy: OnFailure` (line 18) and `backoffLimit: 6` (line 12). A weekly CronJob,
 `reindex` (line 62), runs the same image, command and arguments, with
 `concurrencyPolicy: Forbid` (line 68) so two writers never overlap. Re-indexing without a
 redeploy is one command:
@@ -69,7 +69,7 @@ in Redis so no answer from the old index is served (§3.3).
 - Indexing and serving scale and fail separately. The Job gets 1280Mi requested and a
   1792Mi limit; the api keeps a 160Mi request and does not carry indexing memory.
 - A failed run fails loudly: a zero-chunk document, a hash mismatch, an Ollama error or a
-  Redis failure exits non-zero, and the Job retries up to twice. Because the store step is
+  Redis failure exits non-zero, and the Job retries up to six times, with back-off, which also covers Chroma or Redis still starting on a fresh cluster. Because the store step is
   idempotent, a retry is safe.
 - A Job's pod template is immutable, so `kubectl apply -k` after editing the indexer
   fails until the old Job is deleted (`kubectl delete job indexer -n rahbar`). Day-to-day

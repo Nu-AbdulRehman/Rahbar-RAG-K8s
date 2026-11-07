@@ -106,3 +106,30 @@ def test_a_re_index_with_the_right_model_clears_the_conflict(client: TestClient)
 ])
 def test_pin_conflict(pin: dict[str, Any] | None, dimension: int | None, bad: bool) -> None:
     assert (pin_conflict(pin, Settings(embed_model="nomic-embed-text"), dimension) is not None) is bad
+
+
+def test_a_hung_chroma_at_boot_does_not_hold_up_startup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On a fresh cluster the Chroma Service has no endpoints and the connect hangs. Run in
+    the lifespan, the startup pin check kept /healthz down past the 60 s startup probe and
+    every api pod was killed once (docs/failure-log.md)."""
+    import threading
+
+    from app import main
+
+    release, finished = threading.Event(), threading.Event()
+
+    class HungChroma(PinnedRetriever):
+        def pin(self) -> dict[str, Any]:
+            release.wait(5)              # stands in for a TCP connect with no endpoint
+            finished.set()
+            return {"embed_model": "dummy-768", "dimension": 768}
+
+    monkeypatch.setenv("RETRIEVER", "stub")
+    monkeypatch.setenv("LLM_PROVIDER", "stub")
+    monkeypatch.setattr(main, "get_retriever", lambda settings, embedder: HungChroma({}))
+    try:
+        with TestClient(main.app) as c:
+            assert c.get("/healthz").status_code == 200
+            assert not finished.is_set(), "startup waited for the pin check"
+    finally:
+        release.set()

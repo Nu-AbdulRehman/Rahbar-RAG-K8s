@@ -1,8 +1,5 @@
 # Engineering notes
 
-<!-- STARTER-TODO(7): Q7 (the failure) is still open; it is written last, from
-     docs/failure-log.md. Delete this comment when it is. -->
-
 ## 1. Indexing in API startup: what breaks with 3 replicas and one Chroma volume?
 
 **The failure: three concurrent writers on one collection.** With indexing in the
@@ -19,7 +16,7 @@ startup is past the startup probe's 60 s budget (30 x 2 s, api.yaml:40-43), so t
 would kill them anyway. Every rollout, eviction or crash would start the race again.
 
 **What prevents it:** the Job `indexer` (k8s/base/indexer.yaml:7) is the only writer. It
-runs one pod (`restartPolicy: OnFailure`, line 18, `backoffLimit: 2`, line 12), and the
+runs one pod (`restartPolicy: OnFailure`, line 18, `backoffLimit: 6`, line 12), and the
 weekly CronJob that repeats it has `concurrencyPolicy: Forbid` (line 68), so there are
 never two writers. Chroma itself is one StatefulSet pod with its own claim from
 `volumeClaimTemplates` and `ReadWriteOnce` (k8s/base/chroma.yaml:59-63). The api only
@@ -97,7 +94,7 @@ SIGKILL when the container passes its memory limit. We measured it
 after 85 s with `reason: OOMKilled, exitCode: 137`, during OCR. Because the run had not
 reached the store step, Chroma still held the previous 803 chunks: a failed index run
 never leaves a half-written index. With the real Job's `restartPolicy: OnFailure` it
-would have retried twice (`backoffLimit: 2`) and failed the same way each time, because
+would have retried six times (`backoffLimit: 6`) and failed the same way each time, because
 the input does not change; the fix is the limit, not the retries. CPU is different: above
 the 2-CPU limit the indexer is throttled and only slower, never killed.
 
@@ -142,7 +139,8 @@ all-minilm in the ConfigMap, no re-index, `kubectl rollout restart deploy/api`.
    in the collection metadata (indexer/pipeline/store.py:28-32). A change of either
    rebuilds the collection rather than mixing vectors (store.py:53-56).
 2. At startup the new api pod reads that metadata, makes one probe embedding to learn its
-   own dimension (api/app/main.py:55-60), and compares the two
+   own dimension (api/app/main.py:60-65, run in a thread from line 49 so a slow Chroma
+   cannot hold up /healthz), and compares the two
    (api/app/services/pin.py:21-38): the model name first (line 30), then the dimension
    (line 36).
 3. Every `/readyz` repeats the check (api/app/routes/health.py:31-36), because a
@@ -175,3 +173,57 @@ would be handed unrelated passages. Nothing would turn red. The guard catches th
 too, because it compares the model name before the dimension (pin.py:30).
 
 ## 7. The failure that cost us more than an hour
+
+None of our failures cost a full hour of work, and we would rather say that than stretch
+one. The longest was e2e-eval's first run on GitHub, about 40 minutes from the red job
+(started 16:07 on 2026-11-07) to the green one. It is also the one where we believed the
+wrong thing twice. Every row is in docs/failure-log.md.
+
+**Symptoms.** The `e2e-eval` job (.github/workflows/ci.yml) waited its full 10 minutes
+and failed on one line: `error: timed out waiting for the condition on jobs/indexer`.
+The diagnose step's `kubectl get pods` listed the three api pods, chroma, redis and ui,
+and **no indexer pod at all**. `kubectl logs job/indexer` itself timed out, because there
+was no pod to read. Yet the api pods were `1/1` and their logs showed `/readyz` reading a
+non-empty collection, so something had written the index.
+
+**What we wrongly believed first.** That the Job had never started, perhaps because the
+image was not loaded into kind or the pod could not be scheduled. The `kind load` lines
+("not yet present on node, loading...") and the api's ready state ruled that out within a
+few minutes. Our second theory was right, that the 3-second fixture run reached its last
+step (the Redis cache bump) before Redis had pulled its image. But we then "confirmed" it
+with a test that proved nothing. We created a copy of the Job on minikube with Redis
+scaled to 0, and it failed in 16 s with `BackoffLimitExceeded`. We raised `backoffLimit`,
+ran it again with Redis back after 40 s, and it **still** failed after 336 s. Only then
+did we read the pod's own log, quickly, before the controller deleted it:
+
+```
+no documents found in /corpus
+```
+
+The copy had picked up the dev ConfigMap (`CORPUS_DIR=/corpus`, an empty emptyDir), not
+the e2e one. Both local failures had nothing to do with Redis.
+
+**What finally told the truth.** Two outputs. First, the events of that same misconfigured
+copy, which we had printed and not read. The cause of its failure was wrong, but how a
+failed Job behaves does not depend on the cause:
+
+```
+$ kubectl -n rahbar get events --field-selector involvedObject.name=race-test
+Normal    SuccessfulCreate       job/race-test   Created pod: race-test-klln8
+Normal    SuccessfulDelete       job/race-test   Deleted pod: race-test-klln8
+Warning   BackoffLimitExceeded   job/race-test   Job has reached the specified backoff limit
+```
+
+`SuccessfulDelete` explains the missing pod: when a Job with `restartPolicy: OnFailure`
+exceeds its backoff limit, the controller deletes the pod, and its logs go with it.
+Second, a proper reproduction (the full e2e ConfigMap and Job, Redis at 0 replicas)
+with `backoffLimit: 6` and Redis brought back after 40 s:
+`Complete` with `RESTARTS 3`, one more than the old limit of 2 allowed. The pod had been
+retrying in place while Redis was down; with only 2 retries it would have run out first.
+
+**What we changed.** The e2e overlay gave the fixture Job 6 retries (k8s/overlays/e2e),
+and the next CI run passed. The base Job and CronJob now use 6 as well
+(k8s/base/indexer.yaml:12 and :73), because a fresh `make cluster` has the same race
+whenever an image pull is slow. **What we would do differently:** read the pod's log
+before forming a theory, and when a test confirms a theory too quickly, check that the
+test runs the configuration the failure ran.

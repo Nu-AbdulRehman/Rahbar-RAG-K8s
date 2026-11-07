@@ -51,7 +51,8 @@ model or vector dimension (§4.4). `LLM_PROVIDER=hosted` is the one-file swap
 
 ## Run it on minikube, from a clean clone
 
-You need Docker, minikube, kubectl, `make` with bash (on Windows, WSL 2 or Git Bash), and
+You need Docker, minikube, kubectl, `make` with bash (on Windows, WSL 2; Git Bash has no
+`make`, so there run each target's commands from the Makefile), and
 [Ollama](https://ollama.com) on the host with both models:
 
 ```bash
@@ -99,7 +100,10 @@ For the chat page, map the host in your hosts file (`127.0.0.1 rahbar.local` wit
 tunnel) and open http://rahbar.local.
 
 The api pods stay at 0/1 READY until the index exists: `/readyz` returns 503 naming what
-is missing (`kubectl -n rahbar logs deploy/api`). That is intended (§4.3).
+is missing (`kubectl -n rahbar logs deploy/api`). That is intended (§4.3). On a fresh cluster the
+HPA shows `cpu: <unknown>` for the first few minutes, until metrics-server has samples.
+Checked from a clean clone on a new minikube: 763 s to the first answer
+(docs/evidence/readme-clean-clone.txt).
 
 ## Re-index, without a redeploy
 
