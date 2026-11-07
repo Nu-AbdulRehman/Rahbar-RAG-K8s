@@ -9,7 +9,9 @@
 Decision Q4: the Job downloads the corpus at start-up into an `emptyDir`, checks every file against the committed `corpus/MANIFEST.md`, and only then indexes. The PDFs never enter git or the image. The Job's command:
 
 ```sh
-python corpus/fetch.py --out /corpus   && python corpus/fetch.py --verify --out /corpus   && python -m pipeline.run          # CORPUS_DIR=/corpus
+python corpus/fetch.py --out /corpus &&
+  python corpus/fetch.py --verify --out /corpus &&
+  python -m pipeline.run          # CORPUS_DIR=/corpus
 ```
 
 - `--out /corpus` writes the files, `_index.json` and a throw-away MANIFEST into the emptyDir. The committed MANIFEST is never rewritten in the pod.
