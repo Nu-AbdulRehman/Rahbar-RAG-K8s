@@ -22,6 +22,9 @@ class Prompt:
     # The same evidence as structured data, for the stub provider and for tests.
     passages: list[Passage] = field(default_factory=list)
     question: str = ""
+    # Seconds this one call may take, set by services/ from the request budget. None
+    # means the provider's own LLM_TIMEOUT_SECONDS.
+    timeout: float | None = None
 
 
 @dataclass(frozen=True)

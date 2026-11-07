@@ -8,9 +8,9 @@ never sent to the user.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 
 # Size caps for the browser-held conversation (ADR 0002). The window length itself,
@@ -28,7 +28,9 @@ class Turn(BaseModel):
 
 
 class AskRequest(BaseModel):
-    question: str = Field(min_length=3, max_length=500)
+    # Surrounding whitespace is stripped before the 3-500 check, so "   " is a 422.
+    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3,
+                                               max_length=500)]
     history: list[Turn] = Field(default_factory=list, max_length=MAX_HISTORY_TURNS)
     summary: str = Field(default="", max_length=MAX_SUMMARY)
 

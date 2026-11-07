@@ -45,6 +45,10 @@ class Settings:
     hosted_base_url: str = ""        # e.g. an OpenAI-compatible endpoint
     llm_api_key: str = field(default="", repr=False)   # from the Secret; never log it
     llm_timeout: float = 60.0        # seconds per generation call, then the canned answer
+    # The whole /api/ask request, retry and summary included, ends within this many
+    # seconds, below the nginx Ingress default proxy-read-timeout of 60 s. Past it, the
+    # user would get the Ingress's 504 instead of our canned answer.
+    request_budget: float = 50.0
     embed_timeout: float = 10.0      # seconds to embed one question
     history_turns: int = 3           # turns the browser sends verbatim (ADR 0002)
 
@@ -59,6 +63,12 @@ class Settings:
     cache_max_entries: int = 200     # per cache generation; the newest are kept
 
     log_level: str = "INFO"
+    serve_ui_dir: str = ""           # SERVE_UI_DIR: make dev only; the ui Deployment serves it
+
+    def __post_init__(self) -> None:
+        # Facts and JSON belong at low temperature (section 3.4); refuse to start otherwise.
+        if not 0.0 <= self.temperature <= 0.3:
+            raise ValueError(f"TEMPERATURE must be between 0 and 0.3, got {self.temperature}")
 
 
 def get_settings() -> Settings:
@@ -77,6 +87,7 @@ def get_settings() -> Settings:
         hosted_base_url=os.environ.get("HOSTED_BASE_URL", ""),
         llm_api_key=os.environ.get("LLM_API_KEY", ""),
         llm_timeout=_float("LLM_TIMEOUT_SECONDS", 60.0),
+        request_budget=_float("REQUEST_BUDGET_SECONDS", 50.0),
         embed_timeout=_float("EMBED_TIMEOUT_SECONDS", 10.0),
         history_turns=_int("HISTORY_TURNS", 3),
         cache=os.environ.get("CACHE", "none"),
@@ -86,4 +97,5 @@ def get_settings() -> Settings:
         cache_threshold=_float("CACHE_THRESHOLD", 0.96),
         cache_max_entries=_int("CACHE_MAX_ENTRIES", 200),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
+        serve_ui_dir=os.environ.get("SERVE_UI_DIR", ""),
     )

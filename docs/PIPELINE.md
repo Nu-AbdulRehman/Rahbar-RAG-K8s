@@ -118,4 +118,32 @@ Follow-up questions (type `followup`, ADR 0002) carry a `history` list that run_
 
 The real golden set uses `eval/baseline.json`; the CI fixture set uses `eval/fixtures/baseline.fixture.json`. `make eval-fixtures` passes the fixture baseline explicitly, so the two are never mixed.
 
-Harness check against `make dev` with stubs, 2026-11-07: exit 1, as expected. The stub retriever never returns fixture passages and the stub provider answers everything, so recall@5 is 0.0, abstention correctness 0.0 and citation validity 1.0. Output: `docs/evidence/eval-fixtures-stub.txt`. The fixture baseline is written only when the real indexer and retriever run on the fixtures, because a baseline taken from the stub would set a recall floor of zero.
+Harness check against `make dev` with stubs, 2026-11-07: exit 1, as expected. The stub retriever never returns fixture passages and the stub provider answers everything, so recall@5 is 0.0, abstention correctness 0.0 and citation validity 1.0. Output: `docs/evidence/eval-fixtures-stub.txt`. That run was not used as a baseline, because a stub baseline would set the recall floor to zero. The fixture baseline was taken later with the real retriever (see "Generation and the baseline").
+
+## Configuration for the cluster
+
+The values below are measured or justified above. They go into the `rahbar-config` ConfigMap with these comments. Every other key has a working default in `api/app/config.py` and `indexer/pipeline/config.py`.
+
+```yaml
+CHUNK_SIZE: "150"              # words; best recall@5 of 6 configs (PIPELINE.md "Chunking")
+CHUNK_OVERLAP: "30"            # words; same table
+TOP_K: "5"                     # top_k 1 drops recall@5 from 0.938 to 0.656 (FAILURE-ANALYSIS C)
+RELEVANCE_FLOOR: "0.65"        # between must-abstain max 0.600 and answerable min 0.695
+CACHE: "redis"                 # the code default is none, for make dev
+CACHE_THRESHOLD: "0.96"        # lowest with zero false hits; 0.95 hit "15 days" on "30 days"
+TEMPERATURE: "0.2"             # facts and JSON need 0-0.3 (startup refuses more); 0 invalid replies in 22
+EMBED_MODEL: "nomic-embed-text"  # D2; the pin, read by api and indexer
+LLM_MODEL: "llama3.2:3b"       # D1
+LLM_TIMEOUT_SECONDS: "60"      # per call; REQUEST_BUDGET_SECONDS bounds the whole request
+REQUEST_BUDGET_SECONDS: "50"   # below nginx-ingress's 60 s proxy-read-timeout, so no 504 reaches users
+```
+
+The api also reads `REDIS_HOST`, `REDIS_PORT`, `REDIS_TIMEOUT_SECONDS`, `CACHE_MAX_ENTRIES`, `HISTORY_TURNS` and `EMBED_TIMEOUT_SECONDS`. The indexer reads `EMBED_BATCH_SIZE`, `EMBED_TIMEOUT_SECONDS`, `OCR_DPI`, `REDIS_HOST` and `REDIS_PORT`. Their defaults suit the cluster.
+
+**What the indexer image and Job need:**
+- Build context = repository root, for `corpus/fetch.py`, `corpus/sources.yaml` and `corpus/MANIFEST.md`.
+- The only system package is `tesseract-ocr` (D12).
+- The command and the `/corpus` emptyDir are in "Corpus delivery to the Job" above.
+- Egress to nu.edu.pk on 443, to chroma, to redis (the last step bumps the cache generation, and the run fails without it), and to the Ollama host.
+
+A cold llama3.2:3b load can take longer than the request budget. The first question after a deploy then gets the canned answer, while the model finishes loading for the next one. Warm the model on the host before a demo.

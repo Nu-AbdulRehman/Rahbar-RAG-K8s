@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -102,7 +101,7 @@ def main() -> int:
     settings = get_settings()
     log("indexer starting", dummy=args.dummy, embed_model=settings.embed_model,
         collection=settings.collection, chroma=f"{settings.chroma_host}:{settings.chroma_port}",
-        pod=os.environ.get("HOSTNAME", "-"))
+        pod=settings.pod_name)
     started = time.perf_counter()
     try:
         if args.dummy:

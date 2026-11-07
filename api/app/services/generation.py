@@ -9,7 +9,8 @@ gets the canned answer, never a 5xx.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, replace
 
 from pydantic import ValidationError
 
@@ -57,11 +58,26 @@ def check_citations(answer: Answer, retrieved: list[Passage]) -> Answer:
     return answer.model_copy(update={"citations": kept})
 
 
-def generate(provider: LLMProvider, prompt: Prompt, retrieved: list[Passage]) -> Generated:
+MIN_ATTEMPT_SECONDS = 1.0   # less time than this left: do not start another model call
+
+
+def remaining(deadline: float | None) -> float | None:
+    return None if deadline is None else deadline - time.monotonic()
+
+
+def generate(provider: LLMProvider, prompt: Prompt, retrieved: list[Passage],
+             deadline: float | None = None) -> Generated:
+    """`deadline` is a time.monotonic() value: each attempt gets only the time left, and
+    the retry is skipped when too little remains (Settings.request_budget)."""
     tokens_in = tokens_out = 0
     for attempt in (1, 2):                      # the first try and exactly one retry
+        left = remaining(deadline)
+        if left is not None and left < MIN_ATTEMPT_SECONDS:
+            log.warning("request budget exhausted", extra={"attempt": attempt})
+            break
         try:
-            completion = provider.complete(prompt)
+            completion = provider.complete(prompt if left is None
+                                           else replace(prompt, timeout=left))
             tokens_in += completion.tokens_in
             tokens_out += completion.tokens_out
             answer = check_citations(Answer.model_validate_json(completion.text), retrieved)

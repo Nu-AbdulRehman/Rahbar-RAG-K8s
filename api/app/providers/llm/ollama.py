@@ -12,6 +12,11 @@ from ...config import Settings
 from .base import Completion, Prompt
 
 
+def _timeout(prompt: Prompt) -> float | httpx._client.UseClientDefault:
+    """The request budget's share for this call, else the client's LLM_TIMEOUT_SECONDS."""
+    return httpx.USE_CLIENT_DEFAULT if prompt.timeout is None else prompt.timeout
+
+
 class OllamaProvider:
     name = "ollama"
 
@@ -21,7 +26,7 @@ class OllamaProvider:
         self.client = client or httpx.Client(timeout=settings.llm_timeout)
 
     def complete(self, prompt: Prompt) -> Completion:
-        response = self.client.post(self.url, json={
+        response = self.client.post(self.url, timeout=_timeout(prompt), json={
             "model": self.settings.llm_model,
             "messages": [{"role": "system", "content": prompt.system},
                          {"role": "user", "content": prompt.user}],
