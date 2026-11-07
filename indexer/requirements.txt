@@ -1,0 +1,13 @@
+# Thin client for the Chroma server: run the chromadb/chroma image with the same version.
+chromadb-client==1.0.12
+# chromadb-client 1.0.12 prints telemetry errors with posthog 6+; this pin silences them.
+posthog==5.4.0
+httpx==0.28.1
+pyyaml==6.0.2
+# The last step of a run bumps the semantic cache generation (section 3.3).
+redis==5.2.1
+# Extraction. OCR also needs the tesseract-ocr system package in the Dockerfile. Pages are
+# rendered with pypdfium2, which pdfplumber already installs, so poppler is not needed.
+# 0.11.10 pins pdfminer.six 20260107, past its CVE fixes (section 6). Same 803 chunks.
+pdfplumber==0.11.10
+pytesseract==0.3.13

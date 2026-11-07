@@ -1,0 +1,19 @@
+# One host, two paths (§4.1): / to the ui, /api to the api (minikube addons enable ingress).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rahbar
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: rahbar.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: {name: api, port: {name: http}}
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: ui, port: {name: http}}

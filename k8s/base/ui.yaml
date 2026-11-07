@@ -1,0 +1,67 @@
+# The chat page (§4.1): nginx serving static files. The Ingress routes /api to the api,
+# so nginx proxies nothing.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui
+  labels: {app: ui}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  selector:
+    matchLabels: {app: ui}
+  template:
+    metadata:
+      labels: {app: ui}
+    spec:
+      serviceAccountName: ui
+      automountServiceAccountToken: false
+      enableServiceLinks: false        # a Service named chroma or redis would inject CHROMA_PORT=tcp://... (failure-log)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101                 # the nginx user in nginx-unprivileged
+        runAsGroup: 101
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: ui
+          image: rahbar-ui
+          imagePullPolicy: IfNotPresent
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 20
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}   # nginx.conf writes only here
+          resources:                  # peak 2m, 2Mi (docs/evidence/kubectl-top.txt)
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: "50m"
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+  labels: {app: ui}
+spec:
+  type: ClusterIP
+  selector: {app: ui}
+  ports:
+    - {name: http, port: 8080, targetPort: http}

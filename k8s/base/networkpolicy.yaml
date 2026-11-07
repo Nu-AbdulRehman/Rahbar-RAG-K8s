@@ -1,0 +1,154 @@
+# Flat network closed (§4.7): deny everything in rahbar, both directions, then allow only
+# the paths the architecture uses. Enforced by Calico (make cluster: --cni=calico).
+#
+#   browser -> ingress-nginx -> ui :8080        ingress-nginx -> api :8000
+#   ui -> api :8000                              api, indexer -> chroma :8000, redis :6379
+#   api, indexer -> Ollama on the host :11434    indexer -> nu.edu.pk :443 (corpus fetch, Q4)
+#   every pod -> kube-dns :53 UDP and TCP
+#
+# The ui has no path to chroma or redis (docs/evidence/networkpolicy-proof.txt).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ui
+spec:
+  podSelector:
+    matchLabels: {app: ui}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+      ports:
+        - {protocol: TCP, port: 8080}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: api}
+      ports:
+        - {protocol: TCP, port: 8000}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api
+spec:
+  podSelector:
+    matchLabels: {app: api}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+        - podSelector:
+            matchLabels: {app: ui}
+      ports:
+        - {protocol: TCP, port: 8000}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: chroma}
+      ports:
+        - {protocol: TCP, port: 8000}
+    - to:
+        - podSelector:
+            matchLabels: {app: redis}
+      ports:
+        - {protocol: TCP, port: 6379}
+    - to:
+        - ipBlock:
+            cidr: 192.168.65.254/32    # host.minikube.internal (minikube ssh "grep host.minikube.internal /etc/hosts")
+      ports:
+        - {protocol: TCP, port: 11434}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: indexer
+spec:
+  podSelector:
+    matchLabels: {app: indexer}
+  policyTypes: [Ingress, Egress]
+  # No ingress rule: nothing connects to the Job.
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: chroma}
+      ports:
+        - {protocol: TCP, port: 8000}
+    - to:
+        - podSelector:
+            matchLabels: {app: redis}
+      ports:
+        - {protocol: TCP, port: 6379}
+    - to:
+        - ipBlock:
+            cidr: 192.168.65.254/32    # host.minikube.internal: Ollama embeddings
+      ports:
+        - {protocol: TCP, port: 11434}
+    - to:
+        - ipBlock:
+            cidr: 203.124.44.78/32     # nu.edu.pk and www.nu.edu.pk, for corpus/fetch.py (Q4)
+      ports:
+        - {protocol: TCP, port: 443}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chroma
+spec:
+  podSelector:
+    matchLabels: {app: chroma}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: api}
+        - podSelector:
+            matchLabels: {app: indexer}
+      ports:
+        - {protocol: TCP, port: 8000}
+  # No egress rule: with Egress in policyTypes, Chroma can call nothing.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis
+spec:
+  podSelector:
+    matchLabels: {app: redis}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: api}
+        - podSelector:
+            matchLabels: {app: indexer}  # the last step of a run bumps the cache generation
+      ports:
+        - {protocol: TCP, port: 6379}
+  # No egress rule: with Egress in policyTypes, Redis can call nothing.

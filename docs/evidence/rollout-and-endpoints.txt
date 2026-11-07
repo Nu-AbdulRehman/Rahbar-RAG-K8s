@@ -1,0 +1,35 @@
+# §4.6 rollout, undo and endpoints, 2026-11-07T14:48:03Z, minikube
+
+$ kubectl -n rahbar get endpoints api   # 3 replicas, the Service was never edited
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME   ENDPOINTS                                                     AGE
+api    10.244.120.105:8000,10.244.120.108:8000,10.244.120.109:8000   42m
+10.244.120.105 ready=true
+10.244.120.108 ready=true
+10.244.120.109 ready=true
+
+## before: <title>RAHBAR
+$ kubectl -n rahbar set image deploy/ui ui=rahbar-ui:v2
+deployment.apps/ui image updated
+$ kubectl -n rahbar rollout status deploy/ui
+Waiting for deployment "ui" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "ui" rollout to finish: 1 old replicas are pending termination...
+deployment "ui" successfully rolled out
+## after set image: <title>RAHBAR v2
+$ kubectl -n rahbar rollout history deploy/ui
+deployment.apps/ui 
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+3         <none>
+4         <none>
+5         <none>
+
+$ kubectl -n rahbar rollout undo deploy/ui
+Warning: resource deployments/ui was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/ui rolled back
+Waiting for deployment "ui" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "ui" rollout to finish: 1 old replicas are pending termination...
+deployment "ui" successfully rolled out
+## after undo: <title>RAHBAR
+image now: rahbar-ui:dev

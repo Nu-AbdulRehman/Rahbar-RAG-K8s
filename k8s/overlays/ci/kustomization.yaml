@@ -1,0 +1,19 @@
+# The prod overlay (Docker Hub images, tagged by commit SHA) on an ephemeral kind cluster
+# in cd.yml, where there is no Ollama. The api runs the stub provider and stub retriever,
+# and the indexer writes the three-chunk dummy index, so the smoke test proves the images,
+# the rollouts, the probes, the Job and the Ingress routing without a model (STARTER.md,
+# "How the week runs"). The pin agrees because the dummy index records dummy-768.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../prod
+patches:
+  - target: {kind: ConfigMap, name: rahbar-config}
+    patch: |-
+      - {op: replace, path: /data/RETRIEVER, value: stub}
+      - {op: replace, path: /data/LLM_PROVIDER, value: stub}
+      - {op: replace, path: /data/EMBED_MODEL, value: dummy-768}
+      - {op: replace, path: /data/CHROMA_COLLECTION, value: rahbar-smoke}   # never the real index
+  - target: {kind: Job, name: indexer}
+    patch: |-
+      - {op: replace, path: /spec/template/spec/containers/0/args, value: ["python -m pipeline.run --dummy"]}

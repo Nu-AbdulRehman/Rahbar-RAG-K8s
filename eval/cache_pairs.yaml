@@ -1,0 +1,22 @@
+# Cache-threshold test pairs (§3.3), written before measuring. A semantic cache may serve
+# `b` from the cached answer to `a` only when `same: true`. The shipped CACHE_THRESHOLD is
+# the lowest one at which no `same: false` pair would hit (docs/PIPELINE.md).
+pairs:
+  # paraphrases: the same answer
+  - {same: true,  a: "What CGPA does an undergraduate need to stay off academic warning?", b: "What is the minimum CGPA to avoid academic warning?"}
+  - {same: true,  a: "What happens if I do not meet the attendance requirement in a course?", b: "What is the penalty for not meeting attendance requirements?"}
+  - {same: true,  a: "For how many semesters can I freeze my admission?", b: "How many semesters can a student freeze?"}
+  - {same: true,  a: "What is the tuition fee per credit hour for BS programmes?", b: "How much is the BS tuition fee per credit hour?"}
+  - {same: true,  a: "How long is the summer semester?", b: "What is the duration of the summer semester?"}
+  - {same: true,  a: "Am I allowed to use generative AI to write a literature review?", b: "Can I use generative AI to write my literature review?"}
+  - {same: true,  a: "What is the paper rechecking fee per course?", b: "How much does it cost to get a paper rechecked?"}
+  # near misses: similar words, a different answer
+  - {same: false, a: "What is the tuition fee per credit hour for BS programmes?", b: "What is the tuition fee per credit hour for PhD programmes?"}
+  - {same: false, a: "How much of the fee is refunded if I leave within the first 15 days of classes?", b: "How much of the fee is refunded if I leave within the first 30 days of classes?"}
+  - {same: false, a: "What CGPA does an undergraduate need to stay off academic warning?", b: "What CGPA does an MS student need to stay off academic warning?"}
+  - {same: false, a: "What is the paper rechecking fee per course?", b: "What is the retake final exam fee per course?"}
+  - {same: false, a: "How long is the summer semester?", b: "How long is a regular semester?"}
+  - {same: false, a: "Can I register for a course if I have not passed its prerequisite?", b: "Can I withdraw from a course in my first semester?"}
+  - {same: false, a: "What is the campus transfer fee?", b: "What is the temporary campus transfer fee?"}
+  - {same: false, a: "Am I allowed to use generative AI to write a literature review?", b: "Am I allowed to use generative AI to check my grammar?"}
+  - {same: false, a: "How do I apply for a hostel room?", b: "How do I apply for a semester freeze?"}

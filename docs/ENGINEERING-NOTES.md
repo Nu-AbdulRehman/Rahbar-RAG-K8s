@@ -1,0 +1,229 @@
+# Engineering notes
+
+## 1. Indexing in API startup: what breaks with 3 replicas and one Chroma volume?
+
+**The failure: three concurrent writers on one collection.** With indexing in the
+FastAPI lifespan, all three pods of `replicas: 3` (k8s/base/api.yaml:8) start at once and
+each runs extract, chunk, embed and store against the same Chroma collection on the one
+volume `data-chroma-0`. Our store step upserts every chunk and then deletes the ids its own
+run did not produce (indexer/pipeline/store.py:61-65). Pod A, half way through, deletes
+chunks that pod B has just written and A has not reached yet. The collection ends up with
+a mix that no single run produced, and nothing fails, so nothing alerts. It also costs
+more than correctness: the measured run takes about 190 s at 1659m CPU and 1159Mi
+(docs/evidence/kubectl-top.txt), which is 9x the api's whole memory limit (320Mi,
+api.yaml:63). The pods would be OOM-killed (exit 137) before they finished, and a 190 s
+startup is past the startup probe's 60 s budget (30 x 2 s, api.yaml:40-43), so the kubelet
+would kill them anyway. Every rollout, eviction or crash would start the race again.
+
+**What prevents it:** the Job `indexer` (k8s/base/indexer.yaml:7) is the only writer. It
+runs one pod (`restartPolicy: OnFailure`, line 18, `backoffLimit: 6`, line 12), and the
+weekly CronJob that repeats it has `concurrencyPolicy: Forbid` (line 68), so there are
+never two writers. Chroma itself is one StatefulSet pod with its own claim from
+`volumeClaimTemplates` and `ReadWriteOnce` (k8s/base/chroma.yaml:59-63). The api only
+reads: no Chroma write call exists under api/, and its readiness waits for a non-empty
+collection instead (api/app/routes/health.py:29). ADR 0001 has the full reasoning.
+
+## 2. Readiness and liveness swapped, Chroma slow for 90 seconds: what happens?
+
+We ran it (docs/evidence/probes-chroma-down.txt): 3 api replicas, `chroma` scaled to 0
+for 90 s, one `/api/ask` through the Ingress every ~8 s, first with the probes as shipped
+and then with the two paths swapped.
+
+**As shipped** (liveness `/healthz`, readiness `/readyz`, api.yaml:44-51): `/readyz` fails
+on Chroma (health.py:29) and after 3 x 10 s all three pods go 0/1 and leave the Service.
+The Ingress answers 503 straight away instead of letting requests hang. **No pod
+restarts** (`r=0` throughout). When Chroma returns, the pods are ready again within one
+probe period: 200 at t+106 s, 16 s after Chroma came back.
+
+**Swapped** (liveness `/readyz`, readiness `/healthz`): the pods stay "ready" while Chroma
+is down, so the Service keeps sending traffic to pods that cannot retrieve. Our first
+answers were still 200 only because that question was in the semantic cache, which never
+touches Chroma; an uncached question would have got the canned answer. After 3 x 20 s of
+failed liveness, the kubelet **kills all three pods within about 10 s of each other**
+(t+69 s to t+94 s, `r=1` on every pod), and the Ingress returns 502 and then 503. The
+restart did nothing useful: the pods were never broken, Chroma was. If the outage had
+lasted longer, every restart would have failed liveness again and the whole Deployment
+would have gone into CrashLoopBackOff, with back-off delays that keep it down after
+Chroma is back. A slow dependency would have become a cluster-wide outage. That is why
+`/healthz` touches nothing (health.py:16) and the dependency checks live only in readiness.
+
+One related bug found while building this: the Chroma client used to connect in the
+lifespan, so a Chroma that was down at boot crashed every api pod at startup, the same
+restart storm through a different door. It now connects on first use
+(api/app/retrieval/chroma.py:25-37, docs/failure-log.md).
+
+## 3. What does a CPU-based HPA measure on a generation service, and what should scale it?
+
+It measures the pod's own CPU divided by its request (100m, api.yaml:59), and on a
+generation service that is close to nothing. During a 40-question burst, 6 at a time,
+with the cache mostly missed, the api pods peaked at **6m CPU** while answers took
+**11.3 s at p50 and 30.8 s at worst**, and the HPA (api.yaml:88-97) read **4-6 % of its
+70 % target** (docs/evidence/kubectl-top.txt). The pods spend nearly all of a request
+waiting on two HTTP calls to Ollama (the embedding and the generation), and waiting costs
+no CPU. So the HPA would never scale up, however long the queue got. Worse, scaling the
+api would not help: the work happens in the single Ollama process on the host, which
+answers one generation at a time, so eight api pods would queue on the same model.
+
+**The signal that matters** is load relative to generation capacity: in-flight requests
+per pod, or generation latency (p95 of `rahbar_generation_seconds`,
+api/app/routes/metrics.py:26) against a target. **To use it** we would need (1) an
+in-flight gauge in the api (we export latency histograms and counters, but no
+concurrency gauge), (2) Prometheus scraping `/metrics`, (3) prometheus-adapter or KEDA to
+serve it through the custom metrics API, and (4) an HPA on that `Pods` metric. Even then
+it should scale the thing that generates: with Ollama in the cluster (the
+`ollama-incluster` mode) the model servers are what the HPA should grow, and the api
+should scale with them. CPU stays as a floor for the rare CPU-heavy path (JSON validation
+of long answers).
+
+## 4. The indexer's peak memory, its limit, the margin, and the exit code when it is wrong
+
+`kubectl top pods` every 10 s during a full run (9 documents, 41 OCR pages, 803 chunks)
+put the indexer's **peak at 1159Mi** and 1659m CPU (docs/evidence/kubectl-top.txt). The
+peak is OCR: pages are rendered to images at 300 dpi before tesseract reads them
+(indexer/pipeline/extract.py:61). Our values (k8s/base/indexer.yaml:42-48):
+
+| | Value | Why |
+| --- | --- | --- |
+| request | 1280Mi | the peak plus 10 %, so the scheduler reserves what the run really uses |
+| limit | 1792Mi | 1.5x the peak: a larger scanned document, or a higher OCR_DPI, still fits |
+| margin | 633Mi (55 % over the peak) | |
+
+**Set it wrong and the exit code is 137**: 128 + 9, the kernel's OOM killer sending
+SIGKILL when the container passes its memory limit. We measured it
+(docs/evidence/indexer-oom-137.txt): the same Job with `limits.memory: 768Mi` was killed
+after 85 s with `reason: OOMKilled, exitCode: 137`, during OCR. Because the run had not
+reached the store step, Chroma still held the previous 803 chunks: a failed index run
+never leaves a half-written index. With the real Job's `restartPolicy: OnFailure` it
+would have retried six times (`backoffLimit: 6`) and failed the same way each time, because
+the input does not change; the fix is the limit, not the retries. CPU is different: above
+the 2-CPU limit the indexer is throttled and only slower, never killed.
+
+## 5. recall@5 by question type: where is it worst, and why?
+
+From eval/results.json (llama3.2:3b, 150/30 index): ordinary 1.00, version 1.00, injection
+1.00, **exact term 0.667**, and follow-up 0.50 (ungated). Exact term is the worst gated type,
+and one question accounts for all of it: q13, "What does clause 1.21 of the academic rules
+require?" (eval/golden.yaml:106). Its top hits are the Student Handbook's "I - ACADEMIC
+RULES and REGULATIONS" (0.736), the Prospectus title section and the handbook cover. The
+right chunk, "Attendance Requirements", starts with the literal text "1.21 Students are
+required to maintain 100% attendance" and is not in the top 5 at any of the six chunk
+sizes we measured (docs/evidence/tuning-chunks.json).
+
+Why: an embedding encodes what text is about, and "clause 1.21" carries almost no meaning
+beyond "a rule in the academic rules". The vector for the question lands near every chunk
+about academic rules in general, and the token "1.21", the only thing that identifies the
+answer, has close to no weight. The same blur shows up in the cache measurement: "15
+days" and "30 days" in otherwise identical questions score 0.952 (docs/PIPELINE.md,
+"Semantic cache"). Exact identifiers are where dense retrieval is weakest.
+
+The RAG lecture's fix is **hybrid retrieval**: run a lexical BM25 search beside the vector
+search and merge the two rankings (reciprocal rank fusion). BM25 scores "1.21" as a rare
+exact token and would rank the "Attendance Requirements" chunk first. A cheaper partial
+fix would be to pull clause numbers into chunk metadata at indexing time and filter on them
+when the question contains one. Hybrid BM25 is the deferred bonus (decision Q6), so we
+report the gap instead of hiding it.
+
+The follow-up type's 0.50 has a different cause: q22 ("What about if I freeze the semester
+instead?") is retrieved as the previous question plus this one (api/app/services/
+conversation.py, `retrieval_query`), and the previous question, about withdrawal, pulls
+"Withdrawal from a Course" to the top. ADR 0002 names an LLM rewrite as the upgrade if this
+matters.
+
+## 6. EMBED_MODEL changed on the API only: what does your system do?
+
+**What it does: the new pods never become ready, and the old ones keep serving.** We ran
+exactly this on minikube (docs/evidence/embedding-pin-demo.txt): `EMBED_MODEL` patched to
+all-minilm in the ConfigMap, no re-index, `kubectl rollout restart deploy/api`.
+
+1. The indexer recorded the pin when it stored the index: `embed_model` and `dimension`
+   in the collection metadata (indexer/pipeline/store.py:28-32). A change of either
+   rebuilds the collection rather than mixing vectors (store.py:53-56).
+2. At startup the new api pod reads that metadata, makes one probe embedding to learn its
+   own dimension (api/app/main.py:60-65, run in a thread from line 49 so a slow Chroma
+   cannot hold up /healthz), and compares the two
+   (api/app/services/pin.py:21-38): the model name first (line 30), then the dimension
+   (line 36).
+3. Every `/readyz` repeats the check (api/app/routes/health.py:31-36), because a
+   re-index can change the collection while the pod runs. On a conflict it returns 503
+   with `embedding_pin: index was embedded with EMBED_MODEL='nomic-embed-text' but the api
+   has EMBED_MODEL='all-minilm'; re-index or fix the ConfigMap`, and the pod logs that
+   once as `embedding pin mismatch` (pin.py:42-47), not on every probe.
+4. The new pod sits at **0/1 READY** and receives no traffic. Because the Deployment has
+   `maxUnavailable: 0` (k8s/base/api.yaml:11), the rollout stops there and the three
+   old pods, still on nomic-embed-text, keep answering. The fix is to revert the
+   ConfigMap or re-index with the new model; either one clears the conflict on the next
+   probe (api/tests/test_pin.py, `test_a_re_index_with_the_right_model_clears_the_conflict`).
+
+**Without the guardrail** (measured before it existed, docs/FAILURE-ANALYSIS.md stage C,
+all-minilm at 384 dimensions against a 768-dimension index):
+1. The api embeds each question with the new model (api/app/retrieval/chroma.py:52).
+2. Chroma rejects the query: `InvalidArgumentError: Collection expecting embedding with
+   dimension of 768, got 384`.
+3. The service catches it (api/app/services/answer.py:74-78), logs `retrieval failed`,
+   counts `rahbar_fallbacks_total{reason="retrieval"}` and returns the canned answer. No
+   500, but every user gets "could not produce a reliable answer".
+4. `/readyz` still said ready, because Chroma was reachable and the collection non-empty,
+   so all three pods stayed in the Service serving nothing but fallbacks, and a rollout
+   would have replaced every good pod with a broken one.
+
+That was the lucky case. Two models with the **same** dimension would raise nothing at
+all: Chroma would return its nearest vectors from a different embedding space, the scores
+would still look plausible, the relevance floor would let some through, and the model
+would be handed unrelated passages. Nothing would turn red. The guard catches that case
+too, because it compares the model name before the dimension (pin.py:30).
+
+## 7. The failure that cost us more than an hour
+
+None of our failures cost a full hour of work, and we would rather say that than stretch
+one. The longest was e2e-eval's first run on GitHub, about 40 minutes from the red job
+(started 16:07 on 2026-11-07) to the green one. It is also the one where we believed the
+wrong thing twice. Every row is in docs/failure-log.md.
+
+**Symptoms.** The `e2e-eval` job (.github/workflows/ci.yml) waited its full 10 minutes
+and failed on one line: `error: timed out waiting for the condition on jobs/indexer`.
+The diagnose step's `kubectl get pods` listed the three api pods, chroma, redis and ui,
+and **no indexer pod at all**. `kubectl logs job/indexer` itself timed out, because there
+was no pod to read. Yet the api pods were `1/1` and their logs showed `/readyz` reading a
+non-empty collection, so something had written the index.
+
+**What we wrongly believed first.** That the Job had never started, perhaps because the
+image was not loaded into kind or the pod could not be scheduled. The `kind load` lines
+("not yet present on node, loading...") and the api's ready state ruled that out within a
+few minutes. Our second theory was right, that the 3-second fixture run reached its last
+step (the Redis cache bump) before Redis had pulled its image. But we then "confirmed" it
+with a test that proved nothing. We created a copy of the Job on minikube with Redis
+scaled to 0, and it failed in 16 s with `BackoffLimitExceeded`. We raised `backoffLimit`,
+ran it again with Redis back after 40 s, and it **still** failed after 336 s. Only then
+did we read the pod's own log, quickly, before the controller deleted it:
+
+```
+no documents found in /corpus
+```
+
+The copy had picked up the dev ConfigMap (`CORPUS_DIR=/corpus`, an empty emptyDir), not
+the e2e one. Both local failures had nothing to do with Redis.
+
+**What finally told the truth.** Two outputs. First, the events of that same misconfigured
+copy, which we had printed and not read. The cause of its failure was wrong, but how a
+failed Job behaves does not depend on the cause:
+
+```
+$ kubectl -n rahbar get events --field-selector involvedObject.name=race-test
+Normal    SuccessfulCreate       job/race-test   Created pod: race-test-klln8
+Normal    SuccessfulDelete       job/race-test   Deleted pod: race-test-klln8
+Warning   BackoffLimitExceeded   job/race-test   Job has reached the specified backoff limit
+```
+
+`SuccessfulDelete` explains the missing pod: when a Job with `restartPolicy: OnFailure`
+exceeds its backoff limit, the controller deletes the pod, and its logs go with it.
+Second, a proper reproduction (the full e2e ConfigMap and Job, Redis at 0 replicas)
+with `backoffLimit: 6` and Redis brought back after 40 s:
+`Complete` with `RESTARTS 3`, one more than the old limit of 2 allowed. The pod had been
+retrying in place while Redis was down; with only 2 retries it would have run out first.
+
+**What we changed.** The e2e overlay gave the fixture Job 6 retries (k8s/overlays/e2e),
+and the next CI run passed. The base Job and CronJob now use 6 as well
+(k8s/base/indexer.yaml:12 and :73), because a fresh `make cluster` has the same race
+whenever an image pull is slow. **What we would do differently:** read the pod's log
+before forming a theory, and when a test confirms a theory too quickly, check that the
+test runs the configuration the failure ran.

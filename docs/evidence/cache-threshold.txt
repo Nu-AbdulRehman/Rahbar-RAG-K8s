@@ -1,0 +1,25 @@
+# Cache threshold measurement, 2026-11-07
+# cosine similarity of eval/cache_pairs.yaml under nomic-embed-text (Ollama 0.40.15)
+# same=true pairs may share a cached answer; same=false pairs must never hit
+
+0.9673  same=true   Am I allowed to use generative AI to write a literature review?  ||  Can I use generative AI to write my literature review?
+0.9560  same=true   What is the tuition fee per credit hour for BS programmes?  ||  How much is the BS tuition fee per credit hour?
+0.9517  same=false  How much of the fee is refunded if I leave within the first 15 days of classes?  ||  How much of the fee is refunded if I leave within the first 30 days of classes?
+0.9446  same=true   How long is the summer semester?  ||  What is the duration of the summer semester?
+0.9090  same=false  What is the campus transfer fee?  ||  What is the temporary campus transfer fee?
+0.9038  same=false  What CGPA does an undergraduate need to stay off academic warning?  ||  What CGPA does an MS student need to stay off academic warning?
+0.8806  same=true   For how many semesters can I freeze my admission?  ||  How many semesters can a student freeze?
+0.8780  same=true   What is the paper rechecking fee per course?  ||  How much does it cost to get a paper rechecked?
+0.8719  same=true   What CGPA does an undergraduate need to stay off academic warning?  ||  What is the minimum CGPA to avoid academic warning?
+0.8466  same=true   What happens if I do not meet the attendance requirement in a course?  ||  What is the penalty for not meeting attendance requirements?
+0.8308  same=false  What is the tuition fee per credit hour for BS programmes?  ||  What is the tuition fee per credit hour for PhD programmes?
+0.8126  same=false  How long is the summer semester?  ||  How long is a regular semester?
+0.8060  same=false  Am I allowed to use generative AI to write a literature review?  ||  Am I allowed to use generative AI to check my grammar?
+0.7385  same=false  What is the paper rechecking fee per course?  ||  What is the retake final exam fee per course?
+0.6398  same=false  Can I register for a course if I have not passed its prerequisite?  ||  Can I withdraw from a course in my first semester?
+0.6203  same=false  How do I apply for a hostel room?  ||  How do I apply for a semester freeze?
+
+threshold  false hits  paraphrase hits
+0.90       3           3 of 7
+0.95       1           2 of 7
+0.96       0           1 of 7

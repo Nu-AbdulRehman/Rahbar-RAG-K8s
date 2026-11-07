@@ -1,0 +1,77 @@
+# The vector store (§4.1). A StatefulSet, not a Deployment: the pod keeps one stable
+# identity and its own PVC from volumeClaimTemplates, so a rescheduled pod reattaches the
+# same index instead of starting empty or sharing a volume (docs/ARCHITECTURE.md).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: chroma
+  labels: {app: chroma}
+spec:
+  serviceName: chroma
+  replicas: 1
+  selector:
+    matchLabels: {app: chroma}
+  template:
+    metadata:
+      labels: {app: chroma}
+    spec:
+      serviceAccountName: chroma
+      automountServiceAccountToken: false
+      enableServiceLinks: false        # a Service named chroma or redis would inject CHROMA_PORT=tcp://... (failure-log)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000                  # makes the PVC writable by the non-root user
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: chroma
+          image: chromadb/chroma:1.0.12   # same version as chromadb-client==1.0.12
+          ports:
+            - {name: http, containerPort: 8000}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+          readinessProbe:
+            httpGet: {path: /api/v2/heartbeat, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /api/v2/heartbeat, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:                  # peak 26m, 107Mi with 803 chunks; limit leaves room for the index to grow (docs/evidence/kubectl-top.txt)
+            requests:
+              cpu: 50m
+              memory: 160Mi
+            limits:
+              cpu: "500m"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: tmp
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chroma
+  labels: {app: chroma}
+spec:
+  type: ClusterIP                      # never NodePort or LoadBalancer (§4.1)
+  selector: {app: chroma}
+  ports:
+    - {name: http, port: 8000, targetPort: http}

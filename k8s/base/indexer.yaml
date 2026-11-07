@@ -1,0 +1,120 @@
+# The only writer to Chroma (§4.2, ADR 0001). The Job indexes once; the CronJob re-indexes
+# weekly with the same image, command and arguments. Re-index without a redeploy:
+#   kubectl create job --from=cronjob/reindex manual-reindex-1 -n rahbar
+# The command downloads the corpus into an emptyDir, refuses to go on if any file's SHA-256
+# differs from the committed corpus/MANIFEST.md, then indexes (Q4, docs/PIPELINE.md).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: indexer
+  labels: {app: indexer}
+spec:
+  backoffLimit: 6                      # back-off 10+20+40+80+160 s: covers chroma and redis still starting on a fresh cluster (failure-log)
+  activeDeadlineSeconds: 3600
+  template:
+    metadata:
+      labels: {app: indexer}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: indexer
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: indexer
+          image: rahbar-indexer
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - >-
+              python corpus/fetch.py --out /corpus &&
+              python corpus/fetch.py --verify --out /corpus &&
+              python -m pipeline.run
+          envFrom:
+            - configMapRef: {name: rahbar-config}
+          volumeMounts:
+            - {name: corpus, mountPath: /corpus}
+            - {name: tmp, mountPath: /tmp}
+          resources:                  # peak 1659m, 1159Mi during OCR; the limit is 1.5x peak, so a bigger scan is not an exit 137 (docs/evidence/kubectl-top.txt)
+            requests:
+              cpu: 500m
+              memory: 1280Mi
+            limits:
+              cpu: "2"
+              memory: 1792Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: corpus
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: reindex
+  labels: {app: indexer}
+spec:
+  schedule: "0 3 * * 0"                # weekly, Sunday 03:00
+  concurrencyPolicy: Forbid            # never two writers at once
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 6
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels: {app: indexer}
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: indexer
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: indexer
+              image: rahbar-indexer
+              imagePullPolicy: IfNotPresent
+              command: ["sh", "-c"]
+              args:
+                - >-
+                  python corpus/fetch.py --out /corpus &&
+                  python corpus/fetch.py --verify --out /corpus &&
+                  python -m pipeline.run
+              envFrom:
+                - configMapRef: {name: rahbar-config}
+              volumeMounts:
+                - {name: corpus, mountPath: /corpus}
+                - {name: tmp, mountPath: /tmp}
+              resources:                  # peak 1659m, 1159Mi during OCR; the limit is 1.5x peak, so a bigger scan is not an exit 137 (docs/evidence/kubectl-top.txt)
+                requests:
+                  cpu: 500m
+                  memory: 1280Mi
+                limits:
+                  cpu: "2"
+                  memory: 1792Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+          volumes:
+            - name: corpus
+              emptyDir: {}
+            - name: tmp
+              emptyDir: {}

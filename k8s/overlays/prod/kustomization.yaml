@@ -1,0 +1,11 @@
+# Images from Docker Hub, tagged by commit SHA (§6). cd.yml replaces each newTag with
+# ${{ github.sha }} (`kustomize edit set image`) before it deploys, so the running tag is
+# always one word you can paste into `git show`. The committed value is never :latest.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - {name: rahbar-api, newName: docker.io/nuabdulrehman/rahbar-api, newTag: set-by-cd}
+  - {name: rahbar-indexer, newName: docker.io/nuabdulrehman/rahbar-indexer, newTag: set-by-cd}
+  - {name: rahbar-ui, newName: docker.io/nuabdulrehman/rahbar-ui, newTag: set-by-cd}

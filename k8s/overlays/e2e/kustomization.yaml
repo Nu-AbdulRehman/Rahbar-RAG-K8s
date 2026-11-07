@@ -1,0 +1,37 @@
+# The e2e-eval CI job (§6, decision Q3): the base manifests on a kind cluster, with the
+# images built by ci.yml's build job, the fixture corpus baked into the indexer image, and
+# Ollama on the GitHub runner serving nomic-embed-text only. LLM_PROVIDER=stub, so the gate
+# measures retrieval, abstention and citation validity, which is what it scores (§5.4).
+# ci.yml replaces OLLAMA_HOST_IP with the kind network's gateway (the runner, as pods see
+# it) and sets each image to the commit SHA before applying.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - {name: rahbar-api, newTag: e2e}
+  - {name: rahbar-indexer, newTag: e2e}
+  - {name: rahbar-ui, newTag: e2e}
+patches:
+  - target: {kind: ConfigMap, name: rahbar-config}
+    patch: |-
+      - {op: replace, path: /data/LLM_PROVIDER, value: stub}
+      - {op: replace, path: /data/CORPUS_DIR, value: /app/eval/fixtures}
+      - {op: replace, path: /data/OLLAMA_URL, value: "http://OLLAMA_HOST_IP:11434"}
+      - {op: replace, path: /data/CACHE, value: none}   # the fixture baseline was taken without the cache
+  # The fixtures are in the image (indexer/Dockerfile), so no fetch step and no MANIFEST check.
+  # Indexing the fixtures takes 3 s, so on a fresh cluster the Job reaches its last step
+  # (the Redis cache bump) before Redis is up. With the base backoffLimit of 2 the two quick
+  # in-place restarts fail it in 16 s and the controller deletes the pod (docs/failure-log.md).
+  # 6 retries back off 10+20+40+80+160 s, which covers the dependencies starting.
+  - target: {kind: Job, name: indexer}
+    patch: |-
+      - {op: replace, path: /spec/template/spec/containers/0/args, value: ["python -m pipeline.run"]}
+      - {op: replace, path: /spec/backoffLimit, value: 6}
+  # Ollama is the runner, not host.minikube.internal: the same rule, another address.
+  - target: {kind: NetworkPolicy, name: api}
+    patch: |-
+      - {op: replace, path: /spec/egress/2/to/0/ipBlock/cidr, value: OLLAMA_HOST_IP/32}
+  - target: {kind: NetworkPolicy, name: indexer}
+    patch: |-
+      - {op: replace, path: /spec/egress/2/to/0/ipBlock/cidr, value: OLLAMA_HOST_IP/32}

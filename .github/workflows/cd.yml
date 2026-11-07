@@ -1,0 +1,112 @@
+# Delivery on every push to main (§6): test, then build and push the three images tagged
+# with the commit SHA, then deploy that SHA to an ephemeral kind cluster and smoke-test it
+# through the Ingress. Each stage needs the one before, so nothing untested is published.
+name: cd
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read                       # least privilege; Docker Hub auth is a GitHub Secret
+
+concurrency:
+  group: cd
+  cancel-in-progress: false            # never cancel a deploy half way
+
+env:
+  REGISTRY: docker.io/nuabdulrehman
+  INGRESS_NGINX_VERSION: "controller-v1.12.1"
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: "**/requirements*.txt"
+      - run: pip install -r api/requirements-dev.txt -r indexer/requirements-dev.txt
+      - run: ruff check api indexer eval corpus
+      - run: (cd api && mypy app) && (cd indexer && mypy pipeline)
+      - run: (cd api && pytest -q --cov=app --cov-fail-under=60) && (cd indexer && pytest -q) && pytest -q eval
+
+  build-push:
+    needs: test
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - {image: rahbar-api, context: api, file: api/Dockerfile}
+          - {image: rahbar-indexer, context: ., file: indexer/Dockerfile}
+          - {image: rahbar-ui, context: ui, file: ui/Dockerfile}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: log in to Docker Hub (access token from GitHub Secrets, never a password)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: build and push ${{ matrix.image }}:${{ github.sha }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: ephemeral kind cluster
+        uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: rahbar
+      - name: ingress-nginx
+        run: |
+          kubectl apply -f "https://raw.githubusercontent.com/kubernetes/ingress-nginx/${INGRESS_NGINX_VERSION}/deploy/static/provider/cloud/deploy.yaml"
+          kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
+      - name: pin every image to this commit
+        working-directory: k8s/overlays/ci
+        run: |
+          for img in rahbar-api rahbar-indexer rahbar-ui; do
+            kustomize edit set image "$img=${REGISTRY}/$img:${GITHUB_SHA}"
+          done
+          kubectl kustomize . | grep 'image:' | sort -u
+      - name: apply and wait
+        run: |
+          kubectl apply -k k8s/overlays/ci
+          kubectl -n rahbar rollout status statefulset/chroma --timeout=300s
+          kubectl -n rahbar rollout status deploy/redis --timeout=180s
+          kubectl -n rahbar wait --for=condition=complete job/indexer --timeout=300s
+          kubectl -n rahbar rollout status deploy/api --timeout=300s
+          kubectl -n rahbar rollout status deploy/ui --timeout=180s
+      - name: smoke test through the Ingress
+        run: |
+          kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 8080:80 &
+          for i in $(seq 1 30); do curl -sf -o /dev/null -H 'Host: rahbar.local' localhost:8080/ && break; sleep 2; done
+          curl -sf -H 'Host: rahbar.local' localhost:8080/ | grep -q '<title>RAHBAR'
+          curl -sf -X POST -H 'Host: rahbar.local' -H 'Content-Type: application/json' \
+            -d '{"question":"Is the deployed commit answering?"}' localhost:8080/api/ask > answer.json
+          python3 - <<'PY'
+          import json
+          r = json.load(open("answer.json"))
+          retrieved = {(p["source"], p["section"], p["page"]) for p in r["retrieved"]}
+          assert r["provider"] == "stub", r
+          assert all((c["source"], c["section"], c["page"]) in retrieved for c in r["citations"]), r
+          print("smoke ok:", r["request_id"], r["answer"][:80])
+          PY
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Host: rahbar.local' \
+            -H 'Content-Type: application/json' -d '{"question":"hi"}' localhost:8080/api/ask)" = 422
+      - name: what is running
+        if: always()
+        run: |
+          kubectl -n rahbar get pods -o wide
+          kubectl -n rahbar get deploy,sts -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.template.spec.containers[0].image}{"\n"}{end}'

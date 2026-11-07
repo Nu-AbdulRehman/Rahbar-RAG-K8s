@@ -1,0 +1,23 @@
+# Engineering note Q4: the indexer with its memory limit set below the measured peak, 2026-11-07T14:58:16Z
+# Same image, command and corpus as the reindex CronJob; limits.memory 768Mi (measured peak 1159Mi), backoffLimit 0.
+
+$ kubectl -n rahbar get job oom-test
+NAME       STATUS   COMPLETIONS   DURATION   AGE
+oom-test   Failed   0/1           95s        95s
+
+$ kubectl -n rahbar get pod/oom-test-7k8bb -o jsonpath='{.status.containerStatuses[0].state.terminated}'
+{"containerID":"containerd://69343d433aca17d8ac125d6f493128143bcbdeb77a903a694b738bab69468570","exitCode":137,"finishedAt":"2026-11-07T14:57:53Z","reason":"OOMKilled","startedAt":"2026-11-07T14:56:42Z"}
+
+$ kubectl -n rahbar describe pod/oom-test-7k8bb (State, Limits, Events)
+    State:          Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+      memory:  768Mi
+      memory:  512Mi
+  Normal  Started    95s   kubelet            spec.containers{indexer}: Container started
+
+$ kubectl -n rahbar logs pod/oom-test-7k8bb --tail=2
+9 of 9 match the manifest
+{"ts": "2026-11-07T14:57:22Z", "logger": "rahbar.indexer", "msg": "indexer starting", "dummy": false, "embed_model": "nomic-embed-text", "collection": "rahbar", "chroma": "chroma:8000", "pod": "oom-test-7k8bb"}
+
+Chroma afterwards still holds the previous index (the run died before the store step): 803 chunks

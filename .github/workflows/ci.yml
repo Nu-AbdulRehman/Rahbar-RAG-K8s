@@ -1,0 +1,215 @@
+# Verification on every pull request and every push to dev (§6). Nothing here pushes an
+# image or touches a registry; publishing lives in cd.yml, behind its own needs: chain.
+name: ci
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read                       # least privilege: read the code, nothing else
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  KUBECONFORM_VERSION: "0.7.0"
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: "**/requirements*.txt"
+      - run: pip install -r api/requirements-dev.txt -r indexer/requirements-dev.txt
+      - name: ruff
+        run: ruff check api indexer eval corpus
+      - name: mypy
+        run: |
+          (cd api && mypy app)
+          (cd indexer && mypy pipeline)
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: "**/requirements*.txt"
+      # Both programs: eval/test_poisoned_chunk.py imports the api and the indexer.
+      - run: pip install -r api/requirements-dev.txt -r indexer/requirements-dev.txt
+      - name: pytest api (stubs only, coverage of the app package at least 60 %)
+        working-directory: api
+        run: pytest -q --cov=app --cov-report=term --cov-fail-under=60
+      - name: pytest indexer
+        working-directory: indexer
+        run: pytest -q
+      - name: pytest eval
+        run: pytest -q eval
+
+  manifests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: install kubeconform
+        run: |
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin kubeconform
+      - name: kustomize build | kubeconform -strict (dev and prod)
+        run: |
+          for overlay in dev prod; do
+            kubectl kustomize "k8s/overlays/$overlay" | kubeconform -strict -summary -
+          done
+      - name: no :latest, no placeholder Secret in the build
+        run: |
+          out=$(kubectl kustomize k8s/overlays/prod)
+          if grep -nE 'image: .*:latest\b|image: [^:]+$' <<<"$out"; then
+            echo "::error::an unpinned or :latest image in the prod overlay"; exit 1
+          fi
+          if grep -n 'REPLACE_ME' <<<"$out"; then
+            echo "::error::secret.placeholder.yaml is listed in a kustomization"; exit 1
+          fi
+
+  build:
+    needs: [lint, test, manifests]     # no image is built from code that failed verification
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - {image: rahbar-api, context: api, file: api/Dockerfile}
+          - {image: rahbar-indexer, context: ., file: indexer/Dockerfile}
+          - {image: rahbar-ui, context: ui, file: ui/Dockerfile}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: build ${{ matrix.image }} (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          tags: ${{ matrix.image }}:${{ github.sha }}
+          push: false
+          outputs: type=docker,dest=/tmp/${{ matrix.image }}.tar
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.image }}
+          path: /tmp/${{ matrix.image }}.tar
+          retention-days: 1
+
+  scan:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [rahbar-api, rahbar-indexer, rahbar-ui]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.image }}
+          path: /tmp
+      - run: docker load -i /tmp/${{ matrix.image }}.tar
+      - name: Trivy, fail on fixable HIGH or CRITICAL
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ matrix.image }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+  # The regression gate on a real cluster (§5.4, §6): kind, the images from `build`, the
+  # fixture corpus, Ollama on the runner with nomic-embed-text only and the stub LLM
+  # (decision Q3), then eval/run_eval.py against the fixture baseline. Never the real
+  # baseline: the two are not mixed (D5).
+  e2e-eval:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OLLAMA_VERSION: "0.40.15"        # the version the fixture baseline was measured with
+      EMBED_MODEL: nomic-embed-text
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install httpx==0.28.1 pyyaml==6.0.2   # all eval/run_eval.py needs
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rahbar-*
+          merge-multiple: true
+          path: /tmp/images
+      - name: Ollama on the runner, embeddings only
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl stop ollama || true
+          # Listen beyond loopback: pods reach the runner through the kind network gateway.
+          OLLAMA_HOST=0.0.0.0:11434 nohup ollama serve > /tmp/ollama.log 2>&1 &
+          curl -sf --retry 30 --retry-connrefused --retry-delay 1 http://localhost:11434/api/version
+          ollama pull "$EMBED_MODEL"
+      - name: kind cluster
+        uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: e2e
+      - name: load the images built for this commit
+        run: |
+          for img in rahbar-api rahbar-indexer rahbar-ui; do
+            docker load -i "/tmp/images/$img.tar"
+            kind load docker-image "$img:${GITHUB_SHA}" --name e2e
+          done
+      - name: point the e2e overlay at this commit and at the runner's Ollama
+        working-directory: k8s/overlays/e2e
+        run: |
+          gw=$(docker network inspect kind --format '{{range .IPAM.Config}}{{.Gateway}} {{end}}' \
+               | tr ' ' '\n' | grep -E '^[0-9]+\.' | head -1)
+          echo "Ollama for the pods: http://$gw:11434"
+          docker exec e2e-control-plane curl -sf "http://$gw:11434/api/version"
+          sed -i "s/OLLAMA_HOST_IP/$gw/g" kustomization.yaml
+          for img in rahbar-api rahbar-indexer rahbar-ui; do
+            kustomize edit set image "$img=$img:${GITHUB_SHA}"
+          done
+          kubectl kustomize . | grep -E 'image: rahbar|OLLAMA_URL|cidr:'
+      - name: apply, index the fixtures, wait for the api
+        run: |
+          kubectl apply -k k8s/overlays/e2e
+          kubectl -n rahbar rollout status statefulset/chroma --timeout=300s
+          kubectl -n rahbar rollout status deploy/redis --timeout=180s
+          kubectl -n rahbar wait --for=condition=complete job/indexer --timeout=600s
+          kubectl -n rahbar logs job/indexer | tail -3
+          kubectl -n rahbar rollout status deploy/api --timeout=300s
+      - name: eval/run_eval.py on the fixture golden set, gate against the fixture baseline
+        run: |
+          kubectl -n rahbar port-forward svc/api 8000:8000 > /tmp/port-forward.log 2>&1 &
+          curl -sf --retry 30 --retry-connrefused --retry-delay 1 http://localhost:8000/readyz
+          python eval/run_eval.py --api http://localhost:8000 \
+            --golden eval/fixtures/golden.fixture.yaml \
+            --baseline eval/fixtures/baseline.fixture.json \
+            --out e2e-results.json
+      - name: results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: e2e-results.json
+          if-no-files-found: ignore
+      - name: diagnose (on failure)
+        if: failure()
+        run: |
+          kubectl -n rahbar get pods -o wide || true
+          kubectl -n rahbar describe pods | grep -A12 Events || true
+          kubectl -n rahbar logs job/indexer --tail=50 || true
+          kubectl -n rahbar logs deploy/api --tail=50 || true
+          tail -20 /tmp/ollama.log || true
