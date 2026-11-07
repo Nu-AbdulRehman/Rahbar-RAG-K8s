@@ -73,13 +73,19 @@ jobs:
         run: |
           kubectl apply -f "https://raw.githubusercontent.com/kubernetes/ingress-nginx/${INGRESS_NGINX_VERSION}/deploy/static/provider/cloud/deploy.yaml"
           kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
+      # Set in the prod overlay, where the rahbar-* names are mapped to Docker Hub. Set in
+      # ci it matched nothing (prod had already renamed them) and the first deploy pulled
+      # :set-by-cd (docs/failure-log.md). The guard fails the job if that ever recurs.
       - name: pin every image to this commit
-        working-directory: k8s/overlays/ci
+        working-directory: k8s/overlays/prod
         run: |
           for img in rahbar-api rahbar-indexer rahbar-ui; do
             kustomize edit set image "$img=${REGISTRY}/$img:${GITHUB_SHA}"
           done
-          kubectl kustomize . | grep 'image:' | sort -u
+          kubectl kustomize ../ci | grep 'image:' | sort -u
+          if kubectl kustomize ../ci | grep -E 'image: .*rahbar-' | grep -v ":${GITHUB_SHA}$"; then
+            echo "::error::an image above is not pinned to ${GITHUB_SHA}"; exit 1
+          fi
       - name: apply and wait
         run: |
           kubectl apply -k k8s/overlays/ci
