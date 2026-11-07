@@ -1,0 +1,22 @@
+# §6 gate demonstration: a pull request into protected main that fails the eval gate, then passes
+# PR #29 (closed, never merged): https://github.com/Nu-AbdulRehman/Rahbar-RAG-K8s/pull/29
+
+## 1. The break: commit 46ada29 lowers RELEVANCE_FLOOR from 0.65 to 0.10 (k8s/base/configmap.yaml)
+ci.yml run 42403508209: https://github.com/Nu-AbdulRehman/Rahbar-RAG-K8s/actions/runs/42403508209
+  lint, test, manifests, build x3, scan x3: success
+  e2e-eval: failure. Its last lines:
+      GATE FAILED
+        - must-abstain questions answered from context: f05
+  (f05 is "How do I apply for a hostel room?", the fixture corpus's must-abstain question.
+   At a 0.10 floor its passages clear the floor and the stub provider answers from them.)
+Screenshot: gate-blocked.png. Merge status red; e2e-eval is a required check on main, and the
+sidebar also shows "at least 1 approving review is required".
+
+## 2. The fix: commit 22b69af restores 0.65 (the value measured in docs/evidence/relevance-floor.txt)
+ci.yml run 42403975738: https://github.com/Nu-AbdulRehman/Rahbar-RAG-K8s/actions/runs/42403975738
+  all 10 required checks: success, e2e-eval included
+Screenshot: gate-green.png. Merge status green, with the approving review.
+
+## 3. Closed, not merged
+Neither eval/baseline.json nor eval/fixtures/baseline.fixture.json was touched: the gate was
+passed by fixing the regression, never by moving the baseline.
