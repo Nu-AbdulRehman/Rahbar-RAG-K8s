@@ -137,6 +137,11 @@
 - **Shaped / Wrote:** D2-P5 task list: sample kubectl top pods during a real index and a 40-question burst (§4.5); set requests and limits on every container from the peaks with a stated margin (§4.5); commit the raw output (§4.5); capture the HPA reading a real value (§4.5); show 3 api endpoints without touching the Service (§4.6); set image, watch the rollout, undo it (§4.6). The embedding-pin demonstration is already in docs/evidence/embedding-pin-demo.txt (§4.4).
 - **I changed:** accepted as-is. My first summary compared the samples as strings and under-read the indexer's peak as 77m and 703Mi; the real peak is 1659m and 1159Mi, which would have put the indexer at 75 % of its provisional limit.
 
+## 2026-11-07 · feat/s7-platform-docs
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D2-P9 task list: write ADR 0001 (indexer as a Job) from the measured run (§4.2); write ADR 0004 (provider and data governance) from Dev 1's facts (§3.5); write ARCHITECTURE.md with the diagram and why Chroma is a StatefulSet (§4.1); replace README.md with the summary, the clean-clone apply order, make secret, the corpus and the embedding route (§7, §10); answer engineering notes Q1-Q4 with file:line references (§7); delete Dev 1's handover file once used (AGENTS.md).
+- **I changed:** answered Q2 and Q4 from new measurements rather than reasoning alone: the probes as shipped and swapped with Chroma down for 90 s (docs/evidence/probes-chroma-down.txt), and the indexer at a 768Mi limit (docs/evidence/indexer-oom-137.txt). Removed an ARCHITECTURE.md claim about deleting chroma-0 that had not been tested, and replaced it with the scale-to-0 result that was.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -189,3 +194,4 @@
 - 2026-11-07 · feat/s6-ci · .github/workflows/ci.yml: lint, test (coverage at least 60 %), manifests (kubeconform -strict on dev and prod, no :latest), build (no push) and Trivy scan, read-only permissions (§6).
 - 2026-11-07 · feat/s6-ci · .github/workflows/cd.yml: test, build-push by commit SHA to docker.io/mth99910 (needs: test), deploy to kind with ingress-nginx and a smoke test through the Ingress (needs: build-push); k8s/overlays/ci runs it with stubs and the dummy index (§6).
 - 2026-11-07 · feat/s4.5-resources · Requests and limits on every container from kubectl top peaks (indexer 1659m/1159Mi, api 186m/129Mi, chroma 26m/107Mi), HPA at 4-6 % of 70 %, 3 api endpoints, rollout to v2 and undo (docs/evidence/kubectl-top.txt, rollout-and-endpoints.txt) (§4.5, §4.6).
+- 2026-11-07 · feat/s7-platform-docs · ADR 0001 and ADR 0004, docs/ARCHITECTURE.md, the new README.md (apply order, make secret, corpus, models, API table) and engineering notes Q1-Q4, with two new measurements: probes swapped under a 90 s Chroma outage (all three pods restarted) and the indexer OOM-killed with exit 137 at 768Mi (§4.2, §4.3, §4.5, §7, §10).
