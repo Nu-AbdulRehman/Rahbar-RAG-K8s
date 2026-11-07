@@ -139,7 +139,8 @@ all-minilm in the ConfigMap, no re-index, `kubectl rollout restart deploy/api`.
    in the collection metadata (indexer/pipeline/store.py:28-32). A change of either
    rebuilds the collection rather than mixing vectors (store.py:53-56).
 2. At startup the new api pod reads that metadata, makes one probe embedding to learn its
-   own dimension (api/app/main.py:55-60), and compares the two
+   own dimension (api/app/main.py:60-65, run in a thread from line 49 so a slow Chroma
+   cannot hold up /healthz), and compares the two
    (api/app/services/pin.py:21-38): the model name first (line 30), then the dimension
    (line 36).
 3. Every `/readyz` repeats the check (api/app/routes/health.py:31-36), because a
