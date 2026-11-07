@@ -1,0 +1,11 @@
+# Used only by the indexer build, whose context is the repository root. Allowlist: the
+# image gets exactly what indexer/Dockerfile copies, never .git, corpus/raw or a venv.
+*
+!indexer/requirements.txt
+!indexer/pipeline
+!corpus/fetch.py
+!corpus/sources.yaml
+!corpus/MANIFEST.md
+!eval/fixtures
+**/__pycache__
+**/*.pyc
