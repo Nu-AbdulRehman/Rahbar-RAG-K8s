@@ -1,0 +1,40 @@
+$ python eval/run_eval.py --api http://localhost:8000 --golden eval/fixtures/golden.fixture.yaml --baseline eval/fixtures/baseline.fixture.json
+# make dev (RETRIEVER=stub, LLM_PROVIDER=stub), 2026-11-07
+GATE FAILED
+  - must-abstain questions answered from context: f05
+exit=1
+
+{
+  "recall@3": 0.0,
+  "recall@5": 0.0,
+  "citation_validity": 1.0,
+  "citations": 6,
+  "abstention_correctness": 0.0,
+  "by_type": {
+    "abstain": {
+      "questions": 1,
+      "recall@3": null,
+      "recall@5": null
+    },
+    "exact": {
+      "questions": 1,
+      "recall@3": 0.0,
+      "recall@5": 0.0
+    },
+    "injection": {
+      "questions": 1,
+      "recall@3": 0.0,
+      "recall@5": 0.0
+    },
+    "ordinary": {
+      "questions": 1,
+      "recall@3": 0.0,
+      "recall@5": 0.0
+    },
+    "version": {
+      "questions": 2,
+      "recall@3": 0.0,
+      "recall@5": 0.0
+    }
+  }
+}
