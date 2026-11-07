@@ -1,0 +1,229 @@
+# kubectl top pods -n rahbar, every 10 s, minikube (4 CPU, 5 GB), 2026-11-07
+# Source of every request and limit in k8s/base (table in docs/ARCHITECTURE.md "Resources").
+
+## Summary of peaks
+Real index run (9 documents, 41 OCR pages, 803 chunks, 189-193 s):
+  indexer   19 samples  peak cpu 1659m  peak memory 1159Mi
+  chroma    19 samples  peak cpu    4m  peak memory  107Mi
+  redis     19 samples  peak cpu    9m  peak memory   11Mi
+  api       49 samples  peak cpu  186m  peak memory  129Mi
+  ui        19 samples  peak cpu    2m  peak memory    2Mi
+Query burst: 40 requests in 64s, status {200: 40}, p50 11.3s, max 30.8s, 6 concurrent, cache mostly missed:
+  api       24 samples  peak cpu    6m  peak memory  105Mi
+  chroma     8 samples  peak cpu   26m  peak memory   89Mi
+  redis      8 samples  peak cpu    9m  peak memory    9Mi
+  ui         8 samples  peak cpu    1m  peak memory    2Mi
+HPA during the burst (kubectl get hpa api): cpu: 4%/70% cpu: 6%/70% - a real value, never <unknown>
+
+## Raw samples: real index run
+## 14:40:44
+api-5d999f4d57-7fbg2     186m   129Mi   
+chroma-0                 4m     107Mi   
+indexer-crsdp            77m    39Mi    
+redis-6579f795f5-7f4qm   9m     11Mi    
+ui-6d7858858d-zg62z      2m     2Mi     
+## 14:40:55
+api-5d999f4d57-7fbg2     186m   129Mi   
+chroma-0                 4m     107Mi   
+indexer-crsdp            77m    39Mi    
+redis-6579f795f5-7f4qm   9m     11Mi    
+ui-6d7858858d-zg62z      2m     2Mi     
+## 14:41:05
+api-5d999f4d57-7fbg2     186m   129Mi   
+chroma-0                 4m     107Mi   
+indexer-crsdp            77m    39Mi    
+redis-6579f795f5-7f4qm   9m     11Mi    
+ui-6d7858858d-zg62z      2m     2Mi     
+## 14:41:15
+api-5d999f4d57-7fbg2     186m   129Mi   
+chroma-0                 4m     107Mi   
+indexer-crsdp            77m    39Mi    
+redis-6579f795f5-7f4qm   9m     11Mi    
+ui-6d7858858d-zg62z      2m     2Mi     
+## 14:41:26
+api-5d999f4d57-4m484     4m     68Mi    
+api-5d999f4d57-7fbg2     4m     124Mi   
+api-5d999f4d57-jw6bg     49m    68Mi    
+chroma-0                 3m     102Mi   
+indexer-crsdp            489m   703Mi   
+redis-6579f795f5-7f4qm   8m     10Mi    
+ui-6d7858858d-zg62z      1m     2Mi     
+## 14:41:36
+api-5d999f4d57-4m484     4m     68Mi    
+api-5d999f4d57-7fbg2     4m     124Mi   
+api-5d999f4d57-jw6bg     49m    68Mi    
+chroma-0                 3m     102Mi   
+indexer-crsdp            489m   703Mi   
+redis-6579f795f5-7f4qm   8m     10Mi    
+ui-6d7858858d-zg62z      1m     2Mi     
+## 14:41:47
+api-5d999f4d57-4m484     4m     68Mi    
+api-5d999f4d57-7fbg2     4m     124Mi   
+api-5d999f4d57-jw6bg     49m    68Mi    
+chroma-0                 3m     102Mi   
+indexer-crsdp            489m   703Mi   
+redis-6579f795f5-7f4qm   8m     10Mi    
+ui-6d7858858d-zg62z      1m     2Mi     
+## 14:41:57
+api-5d999f4d57-4m484     4m     68Mi    
+api-5d999f4d57-7fbg2     4m     124Mi   
+api-5d999f4d57-jw6bg     49m    68Mi    
+chroma-0                 3m     102Mi   
+indexer-crsdp            489m   703Mi   
+redis-6579f795f5-7f4qm   8m     10Mi    
+ui-6d7858858d-zg62z      1m     2Mi     
+## 14:42:07
+api-5d999f4d57-4m484     4m     68Mi    
+api-5d999f4d57-7fbg2     4m     124Mi   
+api-5d999f4d57-jw6bg     49m    68Mi    
+chroma-0                 3m     102Mi   
+indexer-crsdp            489m   703Mi   
+redis-6579f795f5-7f4qm   8m     10Mi    
+ui-6d7858858d-zg62z      1m     2Mi     
+## 14:42:18
+api-5d999f4d57-4m484     5m      68Mi     
+api-5d999f4d57-7fbg2     4m      100Mi    
+api-5d999f4d57-jw6bg     4m      69Mi     
+chroma-0                 3m      95Mi     
+indexer-crsdp            1659m   1159Mi   
+redis-6579f795f5-7f4qm   9m      9Mi      
+ui-6d7858858d-zg62z      1m      2Mi      
+## 14:42:28
+api-5d999f4d57-4m484     5m      68Mi     
+api-5d999f4d57-7fbg2     4m      100Mi    
+api-5d999f4d57-jw6bg     4m      69Mi     
+chroma-0                 3m      95Mi     
+indexer-crsdp            1659m   1159Mi   
+redis-6579f795f5-7f4qm   9m      9Mi      
+ui-6d7858858d-zg62z      1m      2Mi      
+## 14:42:39
+api-5d999f4d57-4m484     5m      68Mi     
+api-5d999f4d57-7fbg2     4m      100Mi    
+api-5d999f4d57-jw6bg     4m      69Mi     
+chroma-0                 3m      95Mi     
+indexer-crsdp            1659m   1159Mi   
+redis-6579f795f5-7f4qm   9m      9Mi      
+ui-6d7858858d-zg62z      1m      2Mi      
+## 14:42:49
+api-5d999f4d57-4m484     5m      68Mi     
+api-5d999f4d57-7fbg2     4m      100Mi    
+api-5d999f4d57-jw6bg     4m      69Mi     
+chroma-0                 3m      95Mi     
+indexer-crsdp            1659m   1159Mi   
+redis-6579f795f5-7f4qm   9m      9Mi      
+ui-6d7858858d-zg62z      1m      2Mi      
+## 14:42:59
+api-5d999f4d57-4m484     5m      68Mi     
+api-5d999f4d57-7fbg2     4m      100Mi    
+api-5d999f4d57-jw6bg     4m      69Mi     
+chroma-0                 3m      95Mi     
+indexer-crsdp            1659m   1159Mi   
+redis-6579f795f5-7f4qm   9m      9Mi      
+ui-6d7858858d-zg62z      1m      2Mi      
+## 14:43:10
+api-5d999f4d57-4m484     5m      68Mi     
+api-5d999f4d57-7fbg2     4m      100Mi    
+api-5d999f4d57-jw6bg     4m      69Mi     
+chroma-0                 3m      95Mi     
+indexer-crsdp            1659m   1159Mi   
+redis-6579f795f5-7f4qm   9m      9Mi      
+ui-6d7858858d-zg62z      1m      2Mi      
+## 14:43:20
+api-5d999f4d57-4m484     4m      68Mi    
+api-5d999f4d57-7fbg2     4m      99Mi    
+api-5d999f4d57-jw6bg     4m      69Mi    
+chroma-0                 3m      95Mi    
+indexer-crsdp            1475m   565Mi   
+redis-6579f795f5-7f4qm   9m      9Mi     
+ui-6d7858858d-zg62z      1m      2Mi     
+## 14:43:31
+api-5d999f4d57-4m484     4m      68Mi    
+api-5d999f4d57-7fbg2     4m      99Mi    
+api-5d999f4d57-jw6bg     4m      69Mi    
+chroma-0                 3m      95Mi    
+indexer-crsdp            1475m   565Mi   
+redis-6579f795f5-7f4qm   9m      9Mi     
+ui-6d7858858d-zg62z      1m      2Mi     
+## 14:43:41
+api-5d999f4d57-4m484     4m      68Mi    
+api-5d999f4d57-7fbg2     4m      99Mi    
+api-5d999f4d57-jw6bg     4m      69Mi    
+chroma-0                 3m      95Mi    
+indexer-crsdp            1475m   565Mi   
+redis-6579f795f5-7f4qm   9m      9Mi     
+ui-6d7858858d-zg62z      1m      2Mi     
+## 14:43:51
+api-5d999f4d57-4m484     4m      68Mi    
+api-5d999f4d57-7fbg2     4m      99Mi    
+api-5d999f4d57-jw6bg     4m      69Mi    
+chroma-0                 3m      95Mi    
+indexer-crsdp            1475m   565Mi   
+redis-6579f795f5-7f4qm   9m      9Mi     
+ui-6d7858858d-zg62z      1m      2Mi     
+done
+
+## Raw samples: query burst
+## 14:44:33
+api-5d999f4d57-4m484     5m    68Mi   
+api-5d999f4d57-7fbg2     4m    99Mi   
+api-5d999f4d57-jw6bg     4m    69Mi   
+chroma-0                 26m   87Mi   
+redis-6579f795f5-7f4qm   9m    9Mi    
+ui-6d7858858d-zg62z      1m    2Mi    
+api   Deployment/api   cpu: 4%/70%   3     8     3     39m
+## 14:44:43
+api-5d999f4d57-4m484     5m    68Mi   
+api-5d999f4d57-7fbg2     4m    99Mi   
+api-5d999f4d57-jw6bg     4m    69Mi   
+chroma-0                 26m   87Mi   
+redis-6579f795f5-7f4qm   9m    9Mi    
+ui-6d7858858d-zg62z      1m    2Mi    
+api   Deployment/api   cpu: 4%/70%   3     8     3     39m
+## 14:44:54
+api-5d999f4d57-4m484     5m    68Mi   
+api-5d999f4d57-7fbg2     4m    99Mi   
+api-5d999f4d57-jw6bg     4m    69Mi   
+chroma-0                 26m   87Mi   
+redis-6579f795f5-7f4qm   9m    9Mi    
+ui-6d7858858d-zg62z      1m    2Mi    
+api   Deployment/api   cpu: 4%/70%   3     8     3     39m
+## 14:45:05
+api-5d999f4d57-4m484     5m    68Mi   
+api-5d999f4d57-7fbg2     4m    99Mi   
+api-5d999f4d57-jw6bg     4m    69Mi   
+chroma-0                 26m   87Mi   
+redis-6579f795f5-7f4qm   9m    9Mi    
+ui-6d7858858d-zg62z      1m    2Mi    
+api   Deployment/api   cpu: 4%/70%   3     8     3     39m
+## 14:45:27
+api-5d999f4d57-4m484     6m    70Mi    
+api-5d999f4d57-7fbg2     6m    105Mi   
+api-5d999f4d57-jw6bg     6m    70Mi    
+chroma-0                 6m    89Mi    
+redis-6579f795f5-7f4qm   9m    9Mi     
+ui-6d7858858d-zg62z      1m    2Mi     
+api   Deployment/api   cpu: 6%/70%   3     8     3     40m
+## 14:45:38
+api-5d999f4d57-4m484     6m    70Mi    
+api-5d999f4d57-7fbg2     6m    105Mi   
+api-5d999f4d57-jw6bg     6m    70Mi    
+chroma-0                 6m    89Mi    
+redis-6579f795f5-7f4qm   9m    9Mi     
+ui-6d7858858d-zg62z      1m    2Mi     
+api   Deployment/api   cpu: 6%/70%   3     8     3     40m
+## 14:45:48
+api-5d999f4d57-4m484     6m    70Mi    
+api-5d999f4d57-7fbg2     6m    105Mi   
+api-5d999f4d57-jw6bg     6m    70Mi    
+chroma-0                 6m    89Mi    
+redis-6579f795f5-7f4qm   9m    9Mi     
+ui-6d7858858d-zg62z      1m    2Mi     
+api   Deployment/api   cpu: 6%/70%   3     8     3     40m
+## 14:45:59
+api-5d999f4d57-4m484     6m    70Mi    
+api-5d999f4d57-7fbg2     6m    105Mi   
+api-5d999f4d57-jw6bg     6m    70Mi    
+chroma-0                 6m    89Mi    
+redis-6579f795f5-7f4qm   9m    9Mi     
+ui-6d7858858d-zg62z      1m    2Mi     
+api   Deployment/api   cpu: 6%/70%   3     8     3     40m

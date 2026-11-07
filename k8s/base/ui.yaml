@@ -38,13 +38,13 @@ spec:
             periodSeconds: 20
           volumeMounts:
             - {name: tmp, mountPath: /tmp}   # nginx.conf writes only here
-          resources:
+          resources:                  # peak 2m, 2Mi (docs/evidence/kubectl-top.txt)
             requests:
-              cpu: 10m
+              cpu: 5m
               memory: 16Mi
             limits:
-              cpu: 100m
-              memory: 64Mi
+              cpu: "50m"
+              memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
