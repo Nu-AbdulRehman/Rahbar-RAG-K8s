@@ -5,11 +5,17 @@
     python corpus/fetch.py --force               # download everything again
     python corpus/fetch.py --verify              # re-hash local files against MANIFEST.md
     python corpus/fetch.py --list URL            # list the documents linked from an index page
+    python corpus/fetch.py --out /corpus         # the indexer Job: download into an emptyDir
+    python corpus/fetch.py --verify --out /corpus    # ...then check it against MANIFEST.md
 
 Writes:
     corpus/raw/<file>         the documents (gitignored: never commit someone else's PDFs)
     corpus/raw/_index.json    file -> doc_version, superseded; the indexer reads this
     corpus/MANIFEST.md        URL, size and SHA-256 per document (commit this)
+
+With --out DIR the documents, _index.json and a fresh MANIFEST.md go to DIR instead, and
+the committed corpus/MANIFEST.md is left alone: it is what `--verify --out DIR` checks
+against, so the indexer Job refuses to index bytes nobody reviewed.
 
 Rules this script follows so 40 teams do not hammer one university website:
 one request at a time, a pause between requests, a clear User-Agent, each file
@@ -92,10 +98,10 @@ def load_sources() -> list[dict]:
     return docs
 
 
-def fetch(force: bool) -> int:
+def fetch(force: bool, raw: Path = RAW) -> int:
     docs = load_sources()
-    RAW.mkdir(exist_ok=True)
-    index_path = RAW / "_index.json"
+    raw.mkdir(parents=True, exist_ok=True)
+    index_path = raw / "_index.json"
     previous = {e["name"]: e for e in json.loads(index_path.read_text())} \
         if index_path.exists() else {}
     entries, failures = [], []
@@ -104,7 +110,7 @@ def fetch(force: bool) -> int:
         for doc in docs:
             name, url = doc["name"], normalise(doc["url"])
             old = previous.get(name)
-            if old and not force and (RAW / old["file"]).exists() and old["url"] == url:
+            if old and not force and (raw / old["file"]).exists() and old["url"] == url:
                 print(f"  have    {old['file']}")
                 entries.append({**old, "doc_version": doc.get("doc_version", "unknown"),
                                 "superseded": bool(doc.get("superseded", False))})
@@ -119,7 +125,7 @@ def fetch(force: bool) -> int:
                     raise RuntimeError("Google Drive returned a web page, not the file "
                                        "(too large for direct download, or not shared publicly)")
                 file = slug(name) + guess_extension(url, content_type)
-                (RAW / file).write_bytes(response.content)
+                (raw / file).write_bytes(response.content)
                 entries.append({
                     "name": name, "url": url, "file": file, "bytes": len(response.content),
                     "sha256": hashlib.sha256(response.content).hexdigest(),
@@ -135,8 +141,9 @@ def fetch(force: bool) -> int:
             time.sleep(PAUSE_SECONDS)
 
     index_path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
-    write_manifest(entries)
-    print(f"\n{len(entries)} documents in corpus/raw, manifest written to corpus/MANIFEST.md")
+    manifest = MANIFEST if raw == RAW else raw / "MANIFEST.md"
+    write_manifest(entries, manifest)
+    print(f"\n{len(entries)} documents in {raw}, manifest written to {manifest}")
     if failures:
         print(f"{len(failures)} failed; fix their URLs in sources.yaml and run again:")
         for name, reason in failures:
@@ -145,7 +152,7 @@ def fetch(force: bool) -> int:
     return 0
 
 
-def write_manifest(entries: list[dict]) -> None:
+def write_manifest(entries: list[dict], path: Path = MANIFEST) -> None:
     lines = [
         "# Corpus manifest",
         "",
@@ -159,16 +166,19 @@ def write_manifest(entries: list[dict]) -> None:
     for e in entries:
         lines.append(f"| {e['name']} | {e['doc_version']} | {'yes' if e['superseded'] else 'no'} "
                      f"| `{e['file']}` | {e['bytes']:,} | `{e['sha256']}` | <{e['url']}> |")
-    MANIFEST.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def verify() -> int:
+def verify(raw: Path = RAW) -> int:
     if not MANIFEST.exists():
         sys.exit("no corpus/MANIFEST.md yet; run fetch first")
-    rows = re.findall(r"\| `([^`]+)` \| [\d,]+ \| `([0-9a-f]{64})` \|", MANIFEST.read_text())
+    rows = re.findall(r"\| `([^`]+)` \| [\d,]+ \| `([0-9a-f]{64})` \|",
+                      MANIFEST.read_text(encoding="utf-8"))
+    if not rows:
+        sys.exit("corpus/MANIFEST.md lists no documents")
     bad = 0
     for file, expected in rows:
-        path = RAW / file
+        path = raw / file
         if not path.exists():
             print(f"  missing   {file}")
             bad += 1
@@ -229,12 +239,14 @@ def main() -> int:
     group.add_argument("--force", action="store_true", help="download everything again")
     group.add_argument("--verify", action="store_true", help="check local files against MANIFEST.md")
     group.add_argument("--list", metavar="URL", help="list document links on an index page")
+    parser.add_argument("--out", type=Path, default=RAW,
+                        help="download into, or verify, this folder instead of corpus/raw")
     args = parser.parse_args()
     if args.verify:
-        return verify()
+        return verify(args.out)
     if args.list:
         return list_documents(args.list)
-    return fetch(force=args.force)
+    return fetch(force=args.force, raw=args.out)
 
 
 if __name__ == "__main__":

@@ -84,7 +84,7 @@ def is_heading(text: str, larger: bool) -> bool:
     chapter and title-like ("6. Rules for Summer Semester"). Title-likeness rejects wrapped
     list items in the body font ("1. The University takes pride in ...")."""
     words = text.split()
-    if not words or len(words) > MAX_HEADING_WORDS or text.endswith((",", ";")):
+    if not words or len(words) > MAX_HEADING_WORDS or text.endswith((",", ";")) or "|" in text:
         return False
     alpha = [w for w in words if w[0].isalpha()]
     if not any(sum(c.isalpha() for c in w) >= 3 for w in alpha):

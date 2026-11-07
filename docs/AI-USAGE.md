@@ -40,3 +40,4 @@
 - 2026-11-07 · feat/s3.1-indexer · Implemented embed: batched POST /api/embed with EMBED_MODEL from config, fails the run on an HTTP error, a missing vector or mixed lengths; tests use httpx.MockTransport (§3.1).
 - 2026-11-07 · feat/s3.1-indexer · Implemented store: the only Chroma writer, upsert then prune, rebuild on a pin change, writes embed_model and dimension; tested with a fake client and by hand against chromadb 1.0.12 (§3.1, §4.4).
 - 2026-11-07 · feat/s3.1-indexer · Added cache invalidation as the last step of every run (Redis INCR on rahbar:cache:generation, the Job fails if Redis is down), storage amplification in the run log, and an end-to-end run test on the fixtures (§3.3, §3.1).
+- 2026-11-07 · feat/s3.1-indexer · Corpus delivery (Q4): fetch.py --out DIR for the Job's emptyDir and --verify --out DIR against the committed MANIFEST; 2023 rules URL moved to https; PIPELINE.md extraction, cleaning, chunking and embedding sections (§2, §3.1).

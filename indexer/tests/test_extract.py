@@ -41,6 +41,7 @@ def test_html_table_rows_keep_their_cells_together() -> None:
     ("1.21 Students are required to maintain 100% attendance", False, False),
     ("I V", True, False),
     ("1. BBA X X X X", True, False),
+    ("B+, B, B- | Good", True, False),               # an OCR'd table cell
 ])
 def test_heading_rules(line: str, larger: bool, expected: bool) -> None:
     assert is_heading(line, larger) is expected
