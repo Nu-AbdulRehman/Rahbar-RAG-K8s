@@ -1,8 +1,8 @@
 """Runtime configuration, read once from environment variables.
 
-On the cluster these variables come from your ConfigMap and Secret (section 4.1).
+On the cluster these variables come from the ConfigMap and Secret (section 4.1).
 Nothing here is baked into the image, so one image runs in every environment.
-Add your own keys (relevance floor, cache settings, ...) the same way.
+This is the only module in the api that reads the environment.
 """
 
 from __future__ import annotations
@@ -35,11 +35,16 @@ class Settings:
 
     # Retrieval and generation
     top_k: int = 5
+    # Cosine similarity a passage needs to count as evidence (section 3.4). The ConfigMap
+    # value is chosen with data (docs/PIPELINE.md); this default only serves make dev.
+    relevance_floor: float = 0.5
     temperature: float = 0.2
     llm_model: str = "llama3.2:3b"
     ollama_url: str = "http://host.minikube.internal:11434"
     hosted_base_url: str = ""        # e.g. an OpenAI-compatible endpoint
     llm_api_key: str = field(default="", repr=False)   # from the Secret; never log it
+    llm_timeout: float = 60.0        # seconds per generation call, then the canned answer
+    embed_timeout: float = 10.0      # seconds to embed one question
 
     log_level: str = "INFO"
 
@@ -53,10 +58,13 @@ def get_settings() -> Settings:
         chroma_port=_int("CHROMA_PORT", 8000),
         collection=os.environ.get("CHROMA_COLLECTION", "rahbar"),
         top_k=_int("TOP_K", 5),
+        relevance_floor=_float("RELEVANCE_FLOOR", 0.5),
         temperature=_float("TEMPERATURE", 0.2),
         llm_model=os.environ.get("LLM_MODEL", "llama3.2:3b"),
         ollama_url=os.environ.get("OLLAMA_URL", "http://host.minikube.internal:11434"),
         hosted_base_url=os.environ.get("HOSTED_BASE_URL", ""),
         llm_api_key=os.environ.get("LLM_API_KEY", ""),
+        llm_timeout=_float("LLM_TIMEOUT_SECONDS", 60.0),
+        embed_timeout=_float("EMBED_TIMEOUT_SECONDS", 10.0),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
     )
