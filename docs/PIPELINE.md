@@ -72,7 +72,7 @@ What the table says: the large chunks lose q03 ("passed its prerequisite") and q
 
 Model `EMBED_MODEL` from the ConfigMap (nomic-embed-text, decision D2), through Ollama's `POST /api/embed` in batches of `EMBED_BATCH_SIZE`. Vector dimension 768, as nomic-embed-text returns it; nothing in the code names a model or a dimension. `store.py` writes `embed_model` and `dimension` into the collection metadata (D16). A model or dimension change rebuilds the collection; an ordinary re-index upserts and prunes (D15), so the API never sees an empty collection.
 
-How the api checks the pin: the startup comparison and the `/readyz` refusal are Dev 2's swap task, not built yet. Until then, a mismatch in dimension surfaces as `InvalidArgumentError` on every query and the canned answer (FAILURE-ANALYSIS.md, stage C).
+How the api checks the pin: at startup and on every `/readyz` it compares the collection's `embed_model` and `dimension` with its own `EMBED_MODEL` and the length of its embedder's vectors (api/app/services/pin.py). Any difference keeps the pod at 503, naming both values, so a pod with the wrong model never joins the Service; demonstrated on minikube in docs/evidence/embedding-pin-demo.txt and engineering note Q6.
 
 ## Store
 
@@ -159,7 +159,7 @@ Harness check against `make dev` with stubs, 2026-11-07: exit 1, as expected. Th
 
 ## Configuration for the cluster
 
-The values below are measured or justified above. They go into the `rahbar-config` ConfigMap with these comments. Every other key has a working default in `api/app/config.py` and `indexer/pipeline/config.py`.
+The values below are measured or justified above. They go into the `rahbar-config` ConfigMap with these comments. **Re-measured on minikube** (2026-11-07, `make eval` through the Ingress against the in-cluster index of 803 chunks): recall@3 0.844, recall@5 0.938, citation validity 1.00, abstention 1.00, answer correctness 0.688, identical to the laptop run on every gated number, so every value below stands unchanged in k8s/base/configmap.yaml (docs/evidence/eval-minikube.txt). Every other key has a working default in `api/app/config.py` and `indexer/pipeline/config.py`.
 
 ```yaml
 CHUNK_SIZE: "150"              # words; best recall@5 of 6 configs (PIPELINE.md "Chunking")

@@ -134,32 +134,44 @@ matters.
 
 ## 6. EMBED_MODEL changed on the API only: what does your system do?
 
-Measured on 2026-11-07 (docs/FAILURE-ANALYSIS.md, stage C): we switched the api to
-all-minilm (384 dimensions) against an index built with nomic-embed-text (768).
+**What it does: the new pods never become ready, and the old ones keep serving.** We ran
+exactly this on minikube (docs/evidence/embedding-pin-demo.txt): `EMBED_MODEL` patched to
+all-minilm in the ConfigMap, no re-index, `kubectl rollout restart deploy/api`.
 
-**Without the guardrail** (today's api, where the pin check is still being built):
-1. The api embeds each question with the new model (api/app/retrieval/chroma.py:39).
+1. The indexer recorded the pin when it stored the index: `embed_model` and `dimension`
+   in the collection metadata (indexer/pipeline/store.py:28-32). A change of either
+   rebuilds the collection rather than mixing vectors (store.py:53-56).
+2. At startup the new api pod reads that metadata, makes one probe embedding to learn its
+   own dimension (api/app/main.py:55-60), and compares the two
+   (api/app/services/pin.py:21-38): the model name first (line 30), then the dimension
+   (line 36).
+3. Every `/readyz` repeats the check (api/app/routes/health.py:31-36), because a
+   re-index can change the collection while the pod runs. On a conflict it returns 503
+   with `embedding_pin: index was embedded with EMBED_MODEL='nomic-embed-text' but the api
+   has EMBED_MODEL='all-minilm'; re-index or fix the ConfigMap`, and the pod logs that
+   once as `embedding pin mismatch` (pin.py:42-47), not on every probe.
+4. The new pod sits at **0/1 READY** and receives no traffic. Because the Deployment has
+   `maxUnavailable: 0` (k8s/base/api.yaml:11), the rollout stops there and the three
+   old pods, still on nomic-embed-text, keep answering. The fix is to revert the
+   ConfigMap or re-index with the new model; either one clears the conflict on the next
+   probe (api/tests/test_pin.py, `test_a_re_index_with_the_right_model_clears_the_conflict`).
+
+**Without the guardrail** (measured before it existed, docs/FAILURE-ANALYSIS.md stage C,
+all-minilm at 384 dimensions against a 768-dimension index):
+1. The api embeds each question with the new model (api/app/retrieval/chroma.py:52).
 2. Chroma rejects the query: `InvalidArgumentError: Collection expecting embedding with
    dimension of 768, got 384`.
-3. The service catches it (api/app/services/answer.py:71-74), logs `retrieval failed`,
-   counts `rahbar_fallbacks_total{reason="retrieval"}` and returns the canned answer.
-   No 500, but every user gets "could not produce a reliable answer".
-4. `/readyz` (api/app/routes/health.py:20) still says ready, because Chroma is reachable
-   and the collection is non-empty, so all three pods stay in the Service and serve
-   nothing but fallbacks.
+3. The service catches it (api/app/services/answer.py:74-78), logs `retrieval failed`,
+   counts `rahbar_fallbacks_total{reason="retrieval"}` and returns the canned answer. No
+   500, but every user gets "could not produce a reliable answer".
+4. `/readyz` still said ready, because Chroma was reachable and the collection non-empty,
+   so all three pods stayed in the Service serving nothing but fallbacks, and a rollout
+   would have replaced every good pod with a broken one.
 
-That is the lucky case. Two models with the **same** dimension would raise nothing at all:
-Chroma would return its nearest vectors from a different embedding space, scores would
-still look plausible, the relevance floor would let some through, and the model would be
-handed unrelated passages. Without a guard, nothing anywhere would turn red.
-
-**With the guardrail:** the indexer writes `embed_model` and `dimension` into the collection
-metadata whenever it stores (indexer/pipeline/store.py:28-32). It also rebuilds the
-collection rather than mixing vectors when they change (store.py:53). At startup the api
-compares that metadata with its own EMBED_MODEL and, on a mismatch, keeps `/readyz` at 503
-with one log line naming both models. The pods sit at 0/1 READY, the old ReplicaSet keeps
-serving during a rollout because of `maxUnavailable: 0`, and the fix is either reverting
-the ConfigMap or re-indexing with the new model. The api-side check is Dev 2's swap task
-(api/app/main.py:40); its file and line will be added here when it lands.
+That was the lucky case. Two models with the **same** dimension would raise nothing at
+all: Chroma would return its nearest vectors from a different embedding space, the scores
+would still look plausible, the relevance floor would let some through, and the model
+would be handed unrelated passages. Nothing would turn red. The guard catches that case
+too, because it compares the model name before the dimension (pin.py:30).
 
 ## 7. The failure that cost us more than an hour

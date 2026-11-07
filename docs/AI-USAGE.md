@@ -142,6 +142,11 @@
 - **Shaped / Wrote:** D2-P9 task list: write ADR 0001 (indexer as a Job) from the measured run (§4.2); write ADR 0004 (provider and data governance) from Dev 1's facts (§3.5); write ARCHITECTURE.md with the diagram and why Chroma is a StatefulSet (§4.1); replace README.md with the summary, the clean-clone apply order, make secret, the corpus and the embedding route (§7, §10); answer engineering notes Q1-Q4 with file:line references (§7); delete Dev 1's handover file once used (AGENTS.md).
 - **I changed:** answered Q2 and Q4 from new measurements rather than reasoning alone: the probes as shipped and swapped with Chroma down for 90 s (docs/evidence/probes-chroma-down.txt), and the indexer at a 768Mi limit (docs/evidence/indexer-oom-137.txt). Removed an ARCHITECTURE.md claim about deleting chroma-0 that had not been tested, and replaced it with the scale-to-0 result that was.
 
+## 2026-11-07 · feat/s5.2-cluster-remeasure
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** Dev 1 close-out list: re-index on minikube with the merged indexer image (§3.1); run eval/run_eval.py on golden.yaml through the Ingress (§5.3); compare recall@5, citation validity and abstention with the laptop baseline (§5.4); hand any changed value to the ConfigMap with its source (§4.1); cite the pin guard's file:line in engineering note Q6 (§7); update PIPELINE.md's pin paragraph now the guard exists (§4.4).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -196,3 +201,5 @@
 - 2026-11-07 · feat/s4.5-resources · Requests and limits on every container from kubectl top peaks (indexer 1659m/1159Mi, api 186m/129Mi, chroma 26m/107Mi), HPA at 4-6 % of 70 %, 3 api endpoints, rollout to v2 and undo (docs/evidence/kubectl-top.txt, rollout-and-endpoints.txt) (§4.5, §4.6).
 - 2026-11-07 · feat/s7-platform-docs · ADR 0001 and ADR 0004, docs/ARCHITECTURE.md, the new README.md (apply order, make secret, corpus, models, API table) and engineering notes Q1-Q4, with two new measurements: probes swapped under a 90 s Chroma outage (all three pods restarted) and the indexer OOM-killed with exit 137 at 768Mi (§4.2, §4.3, §4.5, §7, §10).
 - 2026-11-07 · feat/s6-ci · Dev 1: bumped fastapi to 0.162.1 with starlette 1.10.0 and pdfplumber to 0.11.10 (pdfminer.six 20260107), moved pypdf to the indexer's dev requirements; Trivy exit 0 on all three images, suites green, the real corpus chunks to the same 803 chunks with identical per-document hashes (§6).
+- 2026-11-07 · feat/s5.2-cluster-remeasure · Re-indexed on minikube with the merged indexer (803 chunks) and ran eval/golden.yaml through the Ingress: recall@5 0.938, citation validity 1.00, abstention 1.00, same as the laptop, gate passed, ConfigMap unchanged (docs/evidence/eval-minikube.txt) (§5.2-§5.4).
+- 2026-11-07 · feat/s5.2-cluster-remeasure · Engineering note Q6 rewritten around the merged pin guard with file:line references and the minikube demonstration; PIPELINE.md's pin paragraph updated (§4.4, §7).
