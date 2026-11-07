@@ -13,3 +13,4 @@ resources:
   - ui.yaml
   - indexer.yaml
   - ingress.yaml
+  - networkpolicy.yaml

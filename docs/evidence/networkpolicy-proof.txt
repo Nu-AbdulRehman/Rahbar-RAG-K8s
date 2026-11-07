@@ -1,0 +1,36 @@
+# D2-P4 NetworkPolicy proof, 2026-11-07T14:19:47Z, Calico on minikube
+## kubectl get networkpolicy -n rahbar
+NAME           POD-SELECTOR   AGE
+allow-dns      <none>         12s
+api            app=api        12s
+chroma         app=chroma     12s
+default-deny   <none>         12s
+indexer        app=indexer    12s
+redis          app=redis      12s
+ui             app=ui         12s
+
+## from the ui pod (pod/ui-7c459ff78f-84htc): chroma must be unreachable
+wget: download timed out
+BLOCKED (exit 1)
+## from the ui pod: redis must be unreachable
+BLOCKED (exit 1)
+
+## from an api pod (pod/api-85b49795c4-58hls): chroma must be reachable
+REACHED {"nanosecond heartbeat":1794061200499055623}
+## from an api pod: an arbitrary internet host must be unreachable
+BLOCKED TimeoutError
+
+## through the Ingress
+False []
+NAME                   READY   STATUS    RESTARTS   AGE
+api-85b49795c4-58hls   1/1     Running   0          3m10s
+api-85b49795c4-8hczb   1/1     Running   0          5m31s
+api-85b49795c4-n7tv5   1/1     Running   0          9m50s
+(The api log for that request: scores [0.7575, 0.6806, ...], abstained false, fallback false, attempts 1: the api reached Ollama through the ipBlock rule and the model declined from the evidence. A network block would show fallback true with reason retrieval or generation.)
+
+## re-index under the policies: kubectl create job --from=cronjob/reindex manual-reindex-1
+9 of 9 match the manifest
+{"ts": "2026-11-07T14:24:17Z", "logger": "rahbar.indexer", "msg": "indexer finished", "chunks": 803, "cache_generation": 2, "seconds": 192.8}
+9 of 9 match the manifest
+{"ts": "2026-11-07T14:24:17Z", "logger": "rahbar.indexer", "msg": "indexer finished", "chunks": 803, "cache_generation": 2, "seconds": 192.8}
+(The indexer reached nu.edu.pk:443, Ollama, chroma and redis: 9 files fetched and verified, 803 chunks stored, cache generation bumped.)
