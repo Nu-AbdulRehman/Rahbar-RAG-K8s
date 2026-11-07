@@ -45,6 +45,10 @@ class Settings:
     hosted_base_url: str = ""        # e.g. an OpenAI-compatible endpoint
     llm_api_key: str = field(default="", repr=False)   # from the Secret; never log it
     llm_timeout: float = 60.0        # seconds per generation call, then the canned answer
+    # The whole /api/ask request, retry and summary included, ends within this many
+    # seconds, below the nginx Ingress default proxy-read-timeout of 60 s. Past it, the
+    # user would get the Ingress's 504 instead of our canned answer.
+    request_budget: float = 50.0
     embed_timeout: float = 10.0      # seconds to embed one question
     history_turns: int = 3           # turns the browser sends verbatim (ADR 0002)
 
@@ -83,6 +87,7 @@ def get_settings() -> Settings:
         hosted_base_url=os.environ.get("HOSTED_BASE_URL", ""),
         llm_api_key=os.environ.get("LLM_API_KEY", ""),
         llm_timeout=_float("LLM_TIMEOUT_SECONDS", 60.0),
+        request_budget=_float("REQUEST_BUDGET_SECONDS", 50.0),
         embed_timeout=_float("EMBED_TIMEOUT_SECONDS", 10.0),
         history_turns=_int("HISTORY_TURNS", 3),
         cache=os.environ.get("CACHE", "none"),

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+from dataclasses import replace
 
 from pydantic import ValidationError
 
@@ -68,12 +69,16 @@ def context_block(summary: str, history: list[Turn]) -> str:
 
 
 def updated_summary(provider: LLMProvider, summary: str, history: list[Turn], window: int,
-                    temperature: float) -> tuple[str, bool]:
+                    temperature: float, time_left: float | None = None) -> tuple[str, bool]:
     """Fold the oldest turn into the summary once the browser's window is full, because
-    the browser drops that turn after this answer. Returns (summary, failed). A failure
-    keeps the old summary: it never fails the answer."""
+    the browser drops that turn after this answer. Returns (summary, failed). A failure,
+    or too little time left in the request budget, keeps the old summary: it never fails
+    the answer."""
     if len(history) < window:
         return summary, False
+    if time_left is not None and time_left < 1.0:
+        log.warning("summary skipped: request budget exhausted")
+        return summary, True
     oldest = history[0]
     prompt = Prompt(
         system=SUMMARY_INSTRUCTIONS,
@@ -82,6 +87,8 @@ def updated_summary(provider: LLMProvider, summary: str, history: list[Turn], wi
         schema=SUMMARY_SCHEMA, temperature=temperature, question=oldest.question,
     )
     try:
+        if time_left is not None:
+            prompt = replace(prompt, timeout=time_left)
         text = Summary.model_validate_json(provider.complete(prompt).text).summary
         return " ".join(text.split())[:MAX_SUMMARY], False
     except (ValidationError, ValueError) as exc:

@@ -25,7 +25,7 @@ from ..retrieval.base import Retriever
 from ..routes import metrics
 from ..schemas import Answer, AskResponse, Passage, RetrievedRef, Turn
 from .conversation import context_block, is_follow_up, retrieval_query, updated_summary
-from .generation import FALLBACK, Generated, generate
+from .generation import FALLBACK, Generated, generate, remaining
 from .prompt import build_prompt
 from .query import asks_about_older_version
 
@@ -44,6 +44,7 @@ def answer_question(
     history: list[Turn] | None = None, summary: str = "",
     cache: SemanticCache | NoCache | None = None,
 ) -> AskResponse:
+    deadline = time.monotonic() + settings.request_budget   # retry and summary included
     history = history or []
     cache = cache or NoCache()
     follow_up = is_follow_up(question, history)
@@ -61,7 +62,7 @@ def answer_question(
         hit, similarity = cache.lookup(question)
         metrics.record_cache_lookup("hit" if hit else "miss")
         if hit:
-            return _cached(hit, similarity, provider, summary, history, settings)
+            return _cached(hit, similarity, provider, summary, history, settings, deadline)
 
     include_old = asks_about_older_version(query)
     abstained = False
@@ -83,7 +84,7 @@ def answer_question(
                                   context_block(summary, history))
             log.debug("prompt", extra={"system": prompt.system, "user": prompt.user})
             started = time.perf_counter()
-            result = generate(provider, prompt, evidence)
+            result = generate(provider, prompt, evidence, deadline)
             metrics.GENERATION_LATENCY.observe(time.perf_counter() - started)
             metrics.TOKENS.labels(direction="in").observe(result.tokens_in)
             metrics.TOKENS.labels(direction="out").observe(result.tokens_out)
@@ -91,7 +92,8 @@ def answer_question(
                 metrics.FALLBACKS.labels(reason="generation").inc()
 
     new_summary, summary_failed = updated_summary(provider, summary, history,
-                                                  settings.history_turns, settings.temperature)
+                                                  settings.history_turns, settings.temperature,
+                                                  remaining(deadline))
     if summary_failed:
         metrics.SUMMARY_FAILURES.inc()
 
@@ -145,9 +147,10 @@ CACHED_FIELDS = {"answer", "citations", "answered_from_context", "confidence", "
 
 
 def _cached(hit: dict, similarity: float, provider: LLMProvider, summary: str,
-            history: list[Turn], settings: Settings) -> AskResponse:
+            history: list[Turn], settings: Settings, deadline: float) -> AskResponse:
     new_summary, summary_failed = updated_summary(provider, summary, history,
-                                                  settings.history_turns, settings.temperature)
+                                                  settings.history_turns, settings.temperature,
+                                                  remaining(deadline))
     if summary_failed:
         metrics.SUMMARY_FAILURES.inc()
     response = AskResponse(**hit, request_id=request_id_var.get(), summary=new_summary,

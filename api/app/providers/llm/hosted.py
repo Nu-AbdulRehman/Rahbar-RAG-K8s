@@ -12,6 +12,11 @@ from ...config import Settings
 from .base import Completion, Prompt
 
 
+def _timeout(prompt: Prompt) -> float | httpx._client.UseClientDefault:
+    """The request budget's share for this call, else the client's LLM_TIMEOUT_SECONDS."""
+    return httpx.USE_CLIENT_DEFAULT if prompt.timeout is None else prompt.timeout
+
+
 class HostedProvider:
     name = "hosted"
 
@@ -26,6 +31,7 @@ class HostedProvider:
     def complete(self, prompt: Prompt) -> Completion:
         response = self.client.post(
             self.url,
+            timeout=_timeout(prompt),
             headers={"Authorization": f"Bearer {self.settings.llm_api_key}"},
             json={
                 "model": self.settings.llm_model,
