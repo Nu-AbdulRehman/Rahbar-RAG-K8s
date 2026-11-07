@@ -47,6 +47,16 @@ class Settings:
     embed_timeout: float = 10.0      # seconds to embed one question
     history_turns: int = 3           # turns the browser sends verbatim (ADR 0002)
 
+    # Semantic cache (section 3.3, ADR 0003). CACHE=none needs no Redis (make dev).
+    cache: str = "none"              # CACHE: redis | none
+    redis_host: str = "redis"
+    redis_port: int = 6379
+    redis_timeout: float = 0.5       # seconds; a slow Redis is a cache miss, not a slow answer
+    # Cosine similarity for a hit. The ConfigMap value is the lowest threshold with zero
+    # false hits on the golden questions (docs/PIPELINE.md); this default serves make dev.
+    cache_threshold: float = 0.95
+    cache_max_entries: int = 200     # per cache generation; the newest are kept
+
     log_level: str = "INFO"
 
 
@@ -68,5 +78,11 @@ def get_settings() -> Settings:
         llm_timeout=_float("LLM_TIMEOUT_SECONDS", 60.0),
         embed_timeout=_float("EMBED_TIMEOUT_SECONDS", 10.0),
         history_turns=_int("HISTORY_TURNS", 3),
+        cache=os.environ.get("CACHE", "none"),
+        redis_host=os.environ.get("REDIS_HOST", "redis"),
+        redis_port=_int("REDIS_PORT", 6379),
+        redis_timeout=_float("REDIS_TIMEOUT_SECONDS", 0.5),
+        cache_threshold=_float("CACHE_THRESHOLD", 0.95),
+        cache_max_entries=_int("CACHE_MAX_ENTRIES", 200),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
     )
