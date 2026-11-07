@@ -52,6 +52,11 @@
 - **Shaped / Wrote:** ADR 0003 alternatives (second Chroma collection, per-pod cache, redis-stack vector index) and the linear-scan ceiling.
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s4.8-observability
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D1-P6 task list: log one JSON line per request with top_k, chunk ids, scores and abstention (§4.8); log the raw prompt at DEBUG only (§4.8); add retrieval and generation latency histograms (§4.8); add the cache hit ratio, abstention and fallback counters (§4.8); add tokens in and out per request (§4.8); test the line and the metric names (§4.8).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -76,3 +81,4 @@
 - 2026-11-07 · feat/s3.2-conversation-history · Added follow-up questions q21-q22 (type followup, with history) to eval/golden.yaml; run_eval.py sends their history and keeps them out of the gated numbers; checked end to end against make dev (follow-up counter reads 2) (§5.1, §3.2).
 - 2026-11-07 · feat/s3.3-semantic-cache · Wrote docs/adr/0003-semantic-cache-store.md: Redis rather than a second Chroma collection, with the rejected alternatives (§3.3).
 - 2026-11-07 · feat/s3.3-semantic-cache · Semantic cache in api/app/providers/cache/ (cosine over the current generation, CACHE_THRESHOLD from config, CACHE=redis|none), wired into the query path with the never-cache rules and a cached flag for the UI chip; /readyz reports Chroma (non-empty) and Redis with 503 naming the failure; 12 tests, each guard shown to fail when removed (§3.3, §4.3).
+- 2026-11-07 · feat/s4.8-observability · Added rahbar_retrieval_seconds, rahbar_generation_seconds, rahbar_tokens_per_request{direction}, rahbar_abstentions_total, rahbar_fallbacks_total{reason} and rahbar_cache_hit_ratio, with bounded labels only; the raw prompt is logged at DEBUG; tests check the request line and every metric name (§4.8).
