@@ -129,3 +129,87 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
           format: table
+
+  # The regression gate on a real cluster (§5.4, §6): kind, the images from `build`, the
+  # fixture corpus, Ollama on the runner with nomic-embed-text only and the stub LLM
+  # (decision Q3), then eval/run_eval.py against the fixture baseline. Never the real
+  # baseline: the two are not mixed (D5).
+  e2e-eval:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      OLLAMA_VERSION: "0.40.15"        # the version the fixture baseline was measured with
+      EMBED_MODEL: nomic-embed-text
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install httpx==0.28.1 pyyaml==6.0.2   # all eval/run_eval.py needs
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rahbar-*
+          merge-multiple: true
+          path: /tmp/images
+      - name: Ollama on the runner, embeddings only
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl stop ollama || true
+          # Listen beyond loopback: pods reach the runner through the kind network gateway.
+          OLLAMA_HOST=0.0.0.0:11434 nohup ollama serve > /tmp/ollama.log 2>&1 &
+          curl -sf --retry 30 --retry-connrefused --retry-delay 1 http://localhost:11434/api/version
+          ollama pull "$EMBED_MODEL"
+      - name: kind cluster
+        uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: e2e
+      - name: load the images built for this commit
+        run: |
+          for img in rahbar-api rahbar-indexer rahbar-ui; do
+            docker load -i "/tmp/images/$img.tar"
+            kind load docker-image "$img:${GITHUB_SHA}" --name e2e
+          done
+      - name: point the e2e overlay at this commit and at the runner's Ollama
+        working-directory: k8s/overlays/e2e
+        run: |
+          gw=$(docker network inspect kind --format '{{range .IPAM.Config}}{{.Gateway}} {{end}}' \
+               | tr ' ' '\n' | grep -E '^[0-9]+\.' | head -1)
+          echo "Ollama for the pods: http://$gw:11434"
+          docker exec e2e-control-plane curl -sf "http://$gw:11434/api/version"
+          sed -i "s/OLLAMA_HOST_IP/$gw/g" kustomization.yaml
+          for img in rahbar-api rahbar-indexer rahbar-ui; do
+            kustomize edit set image "$img=$img:${GITHUB_SHA}"
+          done
+          kubectl kustomize . | grep -E 'image: rahbar|OLLAMA_URL|cidr:'
+      - name: apply, index the fixtures, wait for the api
+        run: |
+          kubectl apply -k k8s/overlays/e2e
+          kubectl -n rahbar rollout status statefulset/chroma --timeout=300s
+          kubectl -n rahbar rollout status deploy/redis --timeout=180s
+          kubectl -n rahbar wait --for=condition=complete job/indexer --timeout=600s
+          kubectl -n rahbar logs job/indexer | tail -3
+          kubectl -n rahbar rollout status deploy/api --timeout=300s
+      - name: eval/run_eval.py on the fixture golden set, gate against the fixture baseline
+        run: |
+          kubectl -n rahbar port-forward svc/api 8000:8000 > /tmp/port-forward.log 2>&1 &
+          curl -sf --retry 30 --retry-connrefused --retry-delay 1 http://localhost:8000/readyz
+          python eval/run_eval.py --api http://localhost:8000 \
+            --golden eval/fixtures/golden.fixture.yaml \
+            --baseline eval/fixtures/baseline.fixture.json \
+            --out e2e-results.json
+      - name: results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: e2e-results.json
+          if-no-files-found: ignore
+      - name: diagnose (on failure)
+        if: failure()
+        run: |
+          kubectl -n rahbar get pods -o wide || true
+          kubectl -n rahbar describe pods | grep -A12 Events || true
+          kubectl -n rahbar logs job/indexer --tail=50 || true
+          kubectl -n rahbar logs deploy/api --tail=50 || true
+          tail -20 /tmp/ollama.log || true
