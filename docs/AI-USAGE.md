@@ -22,7 +22,7 @@
 - **I changed:** accepted as-is.
 
 - **Tool:** Claude Code + `ponytail`
-- **Shaped / Wrote:** OCR engine (D12), PDF extraction library (D13), chunk unit (D14).
+- **Shaped / Wrote:** OCR engine (D12), PDF extraction library (D13), chunk unit (D14), re-index strategy (D15).
 - **I changed:** accepted as-is. pdf2image was dropped from indexer/requirements.txt because nothing uses it.
 
 ## Task log
@@ -38,3 +38,4 @@
 - 2026-11-07 · feat/s3.1-indexer · Implemented clean: running headers and footers, page numbers and contents entries removed, clause numbers kept; tests in indexer/tests/test_clean.py (§3.1).
 - 2026-11-07 · feat/s3.1-indexer · Implemented chunk: sections, then paragraphs, then sentences or table rows, word overlap inside a section, heading at the top of every chunk; 550 chunks, storage amplification 1.009 at 400/50 on the real corpus; tests in indexer/tests/test_chunk.py (§3.1).
 - 2026-11-07 · feat/s3.1-indexer · Implemented embed: batched POST /api/embed with EMBED_MODEL from config, fails the run on an HTTP error, a missing vector or mixed lengths; tests use httpx.MockTransport (§3.1).
+- 2026-11-07 · feat/s3.1-indexer · Implemented store: the only Chroma writer, upsert then prune, rebuild on a pin change, writes embed_model and dimension; tested with a fake client and by hand against chromadb 1.0.12 (§3.1, §4.4).
