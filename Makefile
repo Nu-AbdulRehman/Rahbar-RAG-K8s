@@ -73,7 +73,8 @@ eval: ## score eval/golden.yaml through the Ingress and apply the CI gate
 	$(BIN)/python eval/run_eval.py --api "http://$(INGRESS_IP)" --host $(HOST)
 
 eval-fixtures: ## score the CI fixture golden set against a local `make dev`, with the fixture baseline
-	$(BIN)/python eval/run_eval.py --api http://localhost:8000 --golden eval/fixtures/golden.fixture.yaml \n	  --baseline eval/fixtures/baseline.fixture.json --out /tmp/rahbar-fixture-results.json
+	$(BIN)/python eval/run_eval.py --api http://localhost:8000 --golden eval/fixtures/golden.fixture.yaml \
+	  --baseline eval/fixtures/baseline.fixture.json --out /tmp/rahbar-fixture-results.json
 
 check: ## run the submission checker
 	$(PY) scripts/check_submission.py
