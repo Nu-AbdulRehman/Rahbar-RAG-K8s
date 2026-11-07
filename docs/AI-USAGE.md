@@ -82,6 +82,15 @@
 - **Shaped / Wrote:** brief-audit task list: document chunk count and metadata schema (§3.1); require inline [source / section] markers and check them against what was retrieved (§3.4); index the planted injection through the real pipeline in a test (§3.4); report answer correctness outside the gate (§5.3); draft Dev 1 input for README and ADRs 0001 and 0004 (§2, §3.5, §4.2).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s4.7-container-images
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D2-P2 task list: write api/Dockerfile on pinned python:3.12.11-slim with a non-root USER (§4.7); write indexer/Dockerfile with tesseract-ocr, fetch.py, sources.yaml, MANIFEST.md and the fixtures (§3.1, §6); write ui/Dockerfile on pinned nginx-unprivileged (§4.7); exclude .git, caches, venvs and corpus/raw from every build context (§6); build all three from `make images` (§6); run each image with a read-only root filesystem and an emptyDir-style /tmp (§4.7).
+- **I changed:** accepted as-is.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** how the indexer image gets corpus/fetch.py and the manifest: build context = repository root with `-f indexer/Dockerfile` and an allowlist `.dockerignore` at the root (chosen); rejected BuildKit named contexts (`--build-context corpus=corpus`: two extra contexts for corpus/ and eval/fixtures, and corpus/raw would be sent unless each has its own ignore file); rejected copying corpus files into indexer/ in the Makefile (generated copies that drift from the committed MANIFEST).
+- **I changed:** accepted as-is. The checker's `indexer/.dockerignore` line stays red because it assumes context `indexer/`; the root file does that job.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -125,3 +134,4 @@
 - 2026-11-07 · feat/s3.4-brief-gaps · eval/test_poisoned_chunk.py: the fixture's planted instruction goes through the real extract, clean, chunk and store code, is retrieved, and an obedient fake model still cannot get "attendance is optional" or its own citation to the user; shown to fail with the citation check removed (§3.4).
 - 2026-11-07 · feat/s3.4-brief-gaps · docs/handover/dev1-input-for-dev2.md: README paragraphs (corpus via MANIFEST and fetch.py, embeddings through the same Ollama host, a no-cluster run), and the indexer facts for ADR 0001 and the data-flow facts for ADR 0004, each traced to a file (§2, §3.5, §4.2).
 - 2026-11-07 · docs/s6-account-split · CLAUDE.md §1.23 and AGENTS.md name the account for each dev's work: Dev 1 as Nu-AbdulRehman, Dev 2 as MTH99910, for commits, PRs and reviews, each reviewing the other's PRs (§6).
+- 2026-11-07 · feat/s4.7-container-images · api, indexer and ui Dockerfiles on pinned bases, non-root numeric USER, exec-form CMD; indexer built from the repository root with an allowlist .dockerignore so it carries fetch.py, MANIFEST and the fixtures; all three verified read-only with only /tmp writable (§4.7, §6).
