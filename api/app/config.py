@@ -59,6 +59,12 @@ class Settings:
     cache_max_entries: int = 200     # per cache generation; the newest are kept
 
     log_level: str = "INFO"
+    serve_ui_dir: str = ""           # SERVE_UI_DIR: make dev only; the ui Deployment serves it
+
+    def __post_init__(self) -> None:
+        # Facts and JSON belong at low temperature (section 3.4); refuse to start otherwise.
+        if not 0.0 <= self.temperature <= 0.3:
+            raise ValueError(f"TEMPERATURE must be between 0 and 0.3, got {self.temperature}")
 
 
 def get_settings() -> Settings:
@@ -86,4 +92,5 @@ def get_settings() -> Settings:
         cache_threshold=_float("CACHE_THRESHOLD", 0.96),
         cache_max_entries=_int("CACHE_MAX_ENTRIES", 200),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
+        serve_ui_dir=os.environ.get("SERVE_UI_DIR", ""),
     )

@@ -24,6 +24,7 @@ class IndexerSettings:
     ocr_dpi: int = 300              # render resolution for pages with no text layer
     redis_host: str = "redis"       # the last step bumps the cache generation (3.3)
     redis_port: int = 6379
+    pod_name: str = "-"             # HOSTNAME: the Job's pod, for the start-up log line
 
 
 def get_settings() -> IndexerSettings:
@@ -42,4 +43,5 @@ def get_settings() -> IndexerSettings:
         ocr_dpi=int(os.environ.get("OCR_DPI", 300)),
         redis_host=os.environ.get("REDIS_HOST", "redis"),
         redis_port=int(os.environ.get("REDIS_PORT", 6379)),
+        pod_name=os.environ.get("HOSTNAME", "-"),
     )
