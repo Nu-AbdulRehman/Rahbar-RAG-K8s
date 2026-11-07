@@ -37,3 +37,4 @@
 - 2026-11-07 · feat/s3.1-indexer · Implemented extract: PDF cropped to the page box, headings by font size, tesseract OCR for textless pages (41 pages in the corpus), HTML tables as rows; tests in indexer/tests/test_extract.py (§3.1).
 - 2026-11-07 · feat/s3.1-indexer · Implemented clean: running headers and footers, page numbers and contents entries removed, clause numbers kept; tests in indexer/tests/test_clean.py (§3.1).
 - 2026-11-07 · feat/s3.1-indexer · Implemented chunk: sections, then paragraphs, then sentences or table rows, word overlap inside a section, heading at the top of every chunk; 550 chunks, storage amplification 1.009 at 400/50 on the real corpus; tests in indexer/tests/test_chunk.py (§3.1).
+- 2026-11-07 · feat/s3.1-indexer · Implemented embed: batched POST /api/embed with EMBED_MODEL from config, fails the run on an HTTP error, a missing vector or mixed lengths; tests use httpx.MockTransport (§3.1).
