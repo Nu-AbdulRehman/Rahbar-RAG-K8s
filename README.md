@@ -84,8 +84,10 @@ make images
 #    api, ui, the indexer Job, the reindex CronJob, Ingress, HPA, NetworkPolicy.
 kubectl apply -k k8s/overlays/dev
 
-# 5. Only for LLM_PROVIDER=hosted: the key, from the command line, never from a file.
-export LLM_API_KEY=...; make secret
+# 5. Only for LLM_PROVIDER=hosted: the key, from the command line, never from a file
+#    (make secret wraps this command). Base64 in a manifest is encoding, not encryption.
+export LLM_API_KEY=...
+kubectl create secret generic rahbar-secret -n rahbar --from-literal=LLM_API_KEY="$LLM_API_KEY"
 
 # 6. Wait for the first index (about 3 minutes: fetch, verify, OCR, embed, store) and the api.
 kubectl -n rahbar wait --for=condition=complete job/indexer --timeout=20m
@@ -146,6 +148,17 @@ cd api && SERVE_UI_DIR=../ui RETRIEVER=chroma LLM_PROVIDER=ollama-host CACHE=red
 
 OCR needs `tesseract` on PATH. Open http://localhost:8000. With no model at all,
 `make dev` runs the api with the stub retriever and provider.
+
+## Delivery: what is running
+
+| | |
+| --- | --- |
+| Successful cd.yml run (test, build-push, deploy to kind, smoke test) | [run 42400938418](https://github.com/Nu-AbdulRehman/Rahbar-RAG-K8s/actions/runs/42400938418), commit `84d0bfd4e1f2d52fa7fcf17bcfc08c796047883f` |
+| Images on Docker Hub, tagged by commit SHA | [rahbar-api](https://hub.docker.com/r/nuabdulrehman/rahbar-api/tags), [rahbar-indexer](https://hub.docker.com/r/nuabdulrehman/rahbar-indexer/tags), [rahbar-ui](https://hub.docker.com/r/nuabdulrehman/rahbar-ui/tags) |
+| Evaluation | `eval/results.json` and `eval/baseline.json` |
+
+"What is running?" is the image tag, a commit SHA: `git show 84d0bfd` explains it. Details:
+`docs/evidence/delivery.txt`.
 
 ## Tests, evaluation and CI
 
