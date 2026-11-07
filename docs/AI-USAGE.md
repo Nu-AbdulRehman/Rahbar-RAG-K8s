@@ -43,6 +43,15 @@
 - **Shaped / Wrote:** ADR 0002 options (server sessions, sticky sessions, full transcript, LLM rewrite) and the follow-up detector (D20).
 - **I changed:** accepted as-is.
 
+## 2026-11-07 · feat/s3.3-semantic-cache
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** D1-P5 task list: build the Redis cache module with a threshold from config (§3.3); respect the generation key the indexer bumps (§3.3); never cache follow-ups, abstentions, out-of-scope or failed answers (§3.3); degrade Redis errors to a miss (§3.3); report Chroma and Redis on /readyz (§4.3); write ADR 0003 (§3.3); write the tests (§3.3).
+- **I changed:** accepted as-is.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** ADR 0003 alternatives (second Chroma collection, per-pod cache, redis-stack vector index) and the linear-scan ceiling.
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -65,3 +74,4 @@
 - 2026-11-07 · feat/s3.2-conversation-history · API side of ADR 0002: capped history and summary in AskRequest (422 past HISTORY_TURNS), follow-up detection and rewrite, conversation block before the evidence, summary fold with failure fallback, follow-up and summary-failure counters, 11 tests (§3.2, §4.8).
 - 2026-11-07 · feat/s3.2-conversation-history · ui/index.html keeps the conversation in localStorage (question and shown answer only, window from history_turns, summary from the API), sanitises the stored turns, adds a New conversation reset, and works when storage is blocked. Script syntax checked with node; not yet clicked through in a browser (§3.2).
 - 2026-11-07 · feat/s3.2-conversation-history · Added follow-up questions q21-q22 (type followup, with history) to eval/golden.yaml; run_eval.py sends their history and keeps them out of the gated numbers; checked end to end against make dev (follow-up counter reads 2) (§5.1, §3.2).
+- 2026-11-07 · feat/s3.3-semantic-cache · Wrote docs/adr/0003-semantic-cache-store.md: Redis rather than a second Chroma collection, with the rejected alternatives (§3.3).
