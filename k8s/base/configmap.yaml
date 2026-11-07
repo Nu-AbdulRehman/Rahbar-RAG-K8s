@@ -21,7 +21,7 @@ data:
   CHUNK_SIZE: "150"                    # words; best recall@5 of 6 configs (PIPELINE.md "Chunking")
   CHUNK_OVERLAP: "30"                  # words; same table
   TOP_K: "5"                           # top_k 1 drops recall@5 from 0.938 to 0.656 (FAILURE-ANALYSIS C)
-  RELEVANCE_FLOOR: "0.65"              # between must-abstain max 0.600 and answerable min 0.695
+  RELEVANCE_FLOOR: "0.10"              # DELIBERATELY BROKEN for the §6 gate demonstration: must-abstain questions will be answered
   CACHE: "redis"                       # the code default is none, for make dev
   CACHE_THRESHOLD: "0.96"              # lowest with zero false hits; 0.95 hit "15 days" on "30 days"
   TEMPERATURE: "0.2"                   # facts and JSON need 0-0.3 (startup refuses more); 0 invalid replies in 22
