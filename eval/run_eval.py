@@ -38,9 +38,18 @@ def load_golden(path: Path) -> list[dict]:
     return questions
 
 
-def ask(client: httpx.Client, api: str, question: str) -> dict:
-    """POST one question and return the AskResponse as a dict (see api/app/schemas.py)."""
-    response = client.post(f"{api.rstrip('/')}/api/ask", json={"question": question})
+# Scored and reported by type, but left out of the overall numbers and so of the gate
+# (ADR 0002): the gate stays comparable with baselines taken before history existed.
+UNGATED_TYPES = {"followup"}
+
+
+def ask(client: httpx.Client, api: str, question: str, history: list | None = None) -> dict:
+    """POST one question and return the AskResponse as a dict (see api/app/schemas.py).
+    `history` is the browser-held conversation, for follow-up questions only."""
+    body: dict = {"question": question}
+    if history:
+        body["history"] = history
+    response = client.post(f"{api.rstrip('/')}/api/ask", json=body)
     response.raise_for_status()
     return response.json()
 
@@ -93,7 +102,8 @@ def summarise(rows: list[dict]) -> dict:
     for row in rows:
         response = row["response"]
         ok, total = _valid_citations(response)
-        valid, cited = valid + ok, cited + total
+        if row["type"] not in UNGATED_TYPES:
+            valid, cited = valid + ok, cited + total
         per_question.append({
             "id": row["id"], "type": row["type"], "must_abstain": row["must_abstain"],
             "recall@3": recall_at_k(row["relevant"], response.get("retrieved") or [], 3),
@@ -103,7 +113,8 @@ def summarise(rows: list[dict]) -> dict:
             "cached": bool(response.get("cached", False)),
             "seconds": row.get("seconds"),
         })
-    abstain = [q for q in per_question if q["must_abstain"]]
+    gated = [q for q in per_question if q["type"] not in UNGATED_TYPES]
+    abstain = [q for q in gated if q["must_abstain"]]
     by_type: dict[str, dict] = {}
     for kind in sorted({q["type"] for q in per_question}):
         group = [q for q in per_question if q["type"] == kind]
@@ -111,8 +122,8 @@ def summarise(rows: list[dict]) -> dict:
                          "recall@3": _mean([q["recall@3"] for q in group]),
                          "recall@5": _mean([q["recall@5"] for q in group])}
     return {
-        "recall@3": _mean([q["recall@3"] for q in per_question]),
-        "recall@5": _mean([q["recall@5"] for q in per_question]),
+        "recall@3": _mean([q["recall@3"] for q in gated]),
+        "recall@5": _mean([q["recall@5"] for q in gated]),
         # Pooled over every citation, so one answer with many citations weighs more.
         "citation_validity": round(valid / cited, 4) if cited else None,
         "citations": cited,
@@ -134,7 +145,8 @@ def gate(results: dict, baseline: dict | None) -> list[str]:
             failures.append(f"recall@5 {recall5} is more than {MAX_RECALL5_DROP:.0%} below "
                             f"the baseline {baseline['recall@5']}")
     answered = [q["id"] for q in results.get("per_question", [])
-                if q["must_abstain"] and q["answered_from_context"]]
+                if q["must_abstain"] and q["answered_from_context"]
+                and q["type"] not in UNGATED_TYPES]
     abstention = results.get("abstention_correctness")
     if abstention is not None and abstention < REQUIRED_ABSTENTION:
         failures.append(f"must-abstain questions answered from context: {', '.join(answered)}")
@@ -164,7 +176,7 @@ def main() -> int:
     with httpx.Client(timeout=120.0, headers=headers) as client:
         for q in questions:
             started = time.perf_counter()
-            response = ask(client, args.api, q["question"])
+            response = ask(client, args.api, q["question"], q.get("history"))
             rows.append({
                 "id": q["id"], "type": q.get("type", "ordinary"),
                 "must_abstain": bool(q.get("must_abstain", False)),

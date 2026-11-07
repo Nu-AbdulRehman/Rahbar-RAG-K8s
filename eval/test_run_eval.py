@@ -50,3 +50,14 @@ def test_gate_passes_a_healthy_run_and_names_each_failure() -> None:
 def test_gate_allows_a_drop_of_exactly_five_points() -> None:
     assert gate({"recall@5": 0.75, "citation_validity": 1.0, "per_question": []},
                 {"recall@5": 0.80}) == []
+
+
+def test_follow_ups_are_reported_but_kept_out_of_the_gate() -> None:
+    rows = [_row("q1", "ordinary", {"retrieved": [A], "citations": [A],
+                                    "answered_from_context": True}, [A]),
+            _row("q2", "followup", {"retrieved": [C], "citations": [B],
+                                    "answered_from_context": True}, [A])]
+    results = summarise(rows)
+    assert results["recall@5"] == 1.0 and results["citation_validity"] == 1.0
+    assert results["by_type"]["followup"]["recall@5"] == 0.0
+    assert gate(results, {"recall@5": 1.0}) == []
