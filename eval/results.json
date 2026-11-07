@@ -2,8 +2,9 @@
   "recall@3": 0.8438,
   "recall@5": 0.9375,
   "citation_validity": 1.0,
-  "citations": 13,
+  "citations": 16,
   "abstention_correctness": 1.0,
+  "answer_correctness": 0.6875,
   "by_type": {
     "abstain": {
       "questions": 3,
@@ -46,7 +47,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 8.34
+      "expect_found": 1.0,
+      "seconds": 8.43
     },
     {
       "id": "q02",
@@ -57,7 +59,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 2.82
+      "expect_found": 1.0,
+      "seconds": 2.67
     },
     {
       "id": "q03",
@@ -68,7 +71,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 2.32
+      "expect_found": 0.0,
+      "seconds": 2.23
     },
     {
       "id": "q04",
@@ -79,7 +83,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 3.54
+      "expect_found": 0.0,
+      "seconds": 3.12
     },
     {
       "id": "q05",
@@ -90,7 +95,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 1.8
+      "expect_found": 1.0,
+      "seconds": 1.67
     },
     {
       "id": "q06",
@@ -101,7 +107,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 1.68
+      "expect_found": 1.0,
+      "seconds": 1.88
     },
     {
       "id": "q07",
@@ -112,7 +119,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 1.97
+      "expect_found": 0.0,
+      "seconds": 2.46
     },
     {
       "id": "q08",
@@ -123,7 +131,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 3.77
+      "expect_found": 0.0,
+      "seconds": 2.42
     },
     {
       "id": "q09",
@@ -134,7 +143,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 3.45
+      "expect_found": 1.0,
+      "seconds": 3.15
     },
     {
       "id": "q10",
@@ -145,7 +155,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 1.87
+      "expect_found": 1.0,
+      "seconds": 3.14
     },
     {
       "id": "q11",
@@ -156,7 +167,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 1.93
+      "expect_found": 1.0,
+      "seconds": 1.75
     },
     {
       "id": "q12",
@@ -167,7 +179,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 2.37
+      "expect_found": 1.0,
+      "seconds": 2.76
     },
     {
       "id": "q13",
@@ -178,7 +191,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 1.48
+      "expect_found": 0.0,
+      "seconds": 1.47
     },
     {
       "id": "q14",
@@ -189,7 +203,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 1.85
+      "expect_found": 1.0,
+      "seconds": 1.8
     },
     {
       "id": "q15",
@@ -200,7 +215,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 1.52
+      "expect_found": 1.0,
+      "seconds": 1.65
     },
     {
       "id": "q16",
@@ -211,7 +227,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 0.06
+      "expect_found": null,
+      "seconds": 0.07
     },
     {
       "id": "q17",
@@ -222,7 +239,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 0.05
+      "expect_found": null,
+      "seconds": 0.08
     },
     {
       "id": "q18",
@@ -233,7 +251,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 0.05
+      "expect_found": null,
+      "seconds": 0.08
     },
     {
       "id": "q19",
@@ -244,7 +263,8 @@
       "citation_validity": 1.0,
       "answered_from_context": true,
       "cached": false,
-      "seconds": 1.94
+      "expect_found": 1.0,
+      "seconds": 1.81
     },
     {
       "id": "q20",
@@ -255,7 +275,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 0.05
+      "expect_found": null,
+      "seconds": 0.08
     },
     {
       "id": "q21",
@@ -263,10 +284,11 @@
       "must_abstain": false,
       "recall@3": 1.0,
       "recall@5": 1.0,
-      "citation_validity": 1.0,
-      "answered_from_context": true,
+      "citation_validity": null,
+      "answered_from_context": false,
       "cached": false,
-      "seconds": 1.82
+      "expect_found": 0.0,
+      "seconds": 2.22
     },
     {
       "id": "q22",
@@ -277,7 +299,8 @@
       "citation_validity": null,
       "answered_from_context": false,
       "cached": false,
-      "seconds": 1.78
+      "expect_found": 0.0,
+      "seconds": 2.25
     }
   ],
   "golden": "golden.yaml",

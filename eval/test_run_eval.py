@@ -61,3 +61,25 @@ def test_follow_ups_are_reported_but_kept_out_of_the_gate() -> None:
     assert results["recall@5"] == 1.0 and results["citation_validity"] == 1.0
     assert results["by_type"]["followup"]["recall@5"] == 0.0
     assert gate(results, {"recall@5": 1.0}) == []
+
+
+def test_answer_correctness_is_reported_but_never_gated() -> None:
+    rows = [_row("q1", "ordinary", {"retrieved": [A], "citations": [A], "answer": "It is 100%.",
+                                    "answered_from_context": True}, [A]),
+            _row("q2", "ordinary", {"retrieved": [A], "citations": [A], "answer": "Declined.",
+                                    "answered_from_context": False}, [A])]
+    rows[0]["expect"], rows[1]["expect"] = "100%", "2.00"
+    results = summarise(rows)
+    assert [q["expect_found"] for q in results["per_question"]] == [1.0, 0.0]
+    assert results["answer_correctness"] == 0.5
+    assert gate(results, {"recall@5": 1.0}) == []
+
+
+def test_expect_numbers_match_a_terse_answer_but_not_a_wrong_one() -> None:
+    from run_eval import expect_found
+
+    yes = {"answered_from_context": True, "answer": "8 weeks [hb.pdf / 6. Summer]"}
+    wrong = {"answered_from_context": True, "answer": "9 weeks [hb.pdf / 6. Summer]"}
+    assert expect_found("8-week", yes) == 1.0 and expect_found("8-week", wrong) == 0.0
+    assert expect_found("12,000", {"answered_from_context": True, "answer": "Rs. 12,000"}) == 1.0
+    assert expect_found("F/A", {"answered_from_context": True, "answer": "an f/a grade"}) == 1.0
