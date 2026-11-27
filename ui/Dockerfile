@@ -1,6 +1,6 @@
 # The ui image (§4.7): static files only. nginx-unprivileged runs as uid 101 and nginx.conf
 # listens on 8080 and writes only under /tmp (an emptyDir in the Deployment).
-FROM nginxinc/nginx-unprivileged:1.30.6-alpine
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine
 
 # Alpine security fixes newer than the base tag (Trivy, §6), then back to the nginx user.
 USER root
