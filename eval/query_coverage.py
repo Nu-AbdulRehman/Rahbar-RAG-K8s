@@ -1,7 +1,7 @@
 """Query coverage (RAGOps E2, E4; paper 4.2.7): do the tests still match real usage?
 
     python eval/query_coverage.py [--live eval/live_queries.jsonl] [--golden eval/golden.jsonl]
-                            [--threshold 0.80] [--min-share 0.85] [--label before]
+                            [--threshold 0.65] [--min-share 0.85] [--label before]
 
 For every live query, find the most similar golden question (cosine of their embeddings,
 with the pinned EMBED_MODEL through Ollama). A query is covered when that similarity
@@ -67,7 +67,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--live", type=Path, default=HERE / "live_queries.jsonl")
     parser.add_argument("--golden", type=Path, default=HERE / "golden.jsonl")
     parser.add_argument("--threshold", type=float,
-                        default=float(os.environ.get("COVERAGE_THRESHOLD", 0.80)))
+                        # 0.65, measured: 26 of 28 in-domain live queries reach it, 2 of 13
+                        # off-topic ones do (one of them, library, is a real golden match);
+                        # at 0.80 only 10 of 28 in-domain queries would count as covered.
+                        default=float(os.environ.get("COVERAGE_THRESHOLD", 0.65)))
     parser.add_argument("--min-share", type=float,
                         default=float(os.environ.get("COVERAGE_MIN_SHARE", 0.85)))
     parser.add_argument("--label", default="coverage")
