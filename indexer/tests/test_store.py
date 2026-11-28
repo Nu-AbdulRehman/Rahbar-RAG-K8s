@@ -62,7 +62,8 @@ def test_store_writes_rows_metadata_and_the_pin(monkeypatch: pytest.MonkeyPatch)
                             "dimension": 2}
     _, vector, meta = col.rows["doc.md#0000"]
     assert vector == [0.1, 0.2]
-    assert set(meta) == {"source", "section", "page", "doc_version", "superseded"}
+    assert set(meta) == {"source", "section", "page", "doc_version", "superseded",
+                             "doc_id", "content_hash"}
 
 
 def test_reindex_upserts_and_prunes_without_a_rebuild() -> None:

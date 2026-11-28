@@ -1,4 +1,5 @@
 ---
+doc_id: academic-rules
 source: academic-rules-2023.md
 doc_version: 2023
 superseded: true

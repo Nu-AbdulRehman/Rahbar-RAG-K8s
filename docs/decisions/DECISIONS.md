@@ -31,3 +31,16 @@ The resolution log. A decision the brief does not dictate gets a row here. Never
 | D20 | Follow-up detection is a heuristic, used only when history is present: a referring word, a continuation opener, or 4 words or fewer (api/app/services/conversation.py) | Resolved (ponytail) | Measured: 0 of 26 standalone golden and fixture questions flagged with history present, 7 of 7 phrased follow-ups caught (api/tests/test_conversation.py). Rejected: an LLM classifier, which adds a model call to every question in a conversation and can be steered by the question it judges; embedding similarity to the previous turn, which needs its own measured threshold and misses ellipsis ("and for PhD?") |
 | D21 | CHUNK_SIZE=150, CHUNK_OVERLAP=30 (words) | Resolved (measured) | Best recall@5 (0.938) of six configs, tied with 100/0, which has 25 % more chunks and shorter evidence; docs/PIPELINE.md, "Chunking" |
 | D22 | CACHE_THRESHOLD = 0.96 | Resolved (measured) | Lowest threshold with zero false hits on eval/cache_pairs.yaml; at 0.95 "15 days" hit "30 days" (0.9517); docs/PIPELINE.md, "Semantic cache" |
+| R1 | Assignment 03 (RAGOps) builds on RAHBAR in the same repository, branches `ragops/...` | Resolved (A03 plan) | feature branch -> dev -> main as before; A02 stays intact on main |
+| R2 | Member 1 = Nu-AbdulRehman (Parts A, B, C1, E); Member 2 = MTH99910 (Parts C2, C3, D, F) | Resolved (A03 plan) | every commit, PR and review through the owner's account; each reviews the other |
+| R3 | Balanced commits | Resolved (A03 plan) | neither member below 40 % of `git shortlog -sn` |
+| R4 | The data lake is a PVC with `raw/`, `quarantine/`, `archive/`, `reports/`, `incoming/` under DATA_LAKE_DIR | Resolved (A03 plan) | replaces the A02 emptyDir; survives pod restarts |
+| R5 | Results and traces on a PVC, copied into `eval/results/` and `traces/` for commit | Resolved (A03 plan) | committed files are the cluster's own output |
+| R6 | All thresholds in one ConfigMap | Resolved (A03 plan) | verification, coverage and gate thresholds change without a rebuild |
+| R7 | Default LLM stays llama3.2:3b on host Ollama | Resolved (A03 plan) | as D1 |
+| R8 | Seeds fixed and the suite run twice | Resolved (A03 plan) | Part B stochasticity |
+| R9 | The ingestion Job is the only writer to Chroma, for every collection | Resolved (A03 plan) | candidate collections are built by the same Job with another CHROMA_COLLECTION |
+| R10 | Part C: chunking 200/40 is the passing candidate; all-minilm is the deliberately failing one and the bad release for rollout undo | Resolved (A03 plan) | C1 compares both against the 150/30 nomic-embed-text baseline |
+| R11 | The faithfulness judge is llama3.2:3b on host Ollama | Resolved (A03 plan) | agreement measured against 8 hand-labelled answers |
+| R12 | Namespace stays `rahbar` | Resolved (A03 plan) | A02 objects carry over; new objects added to k8s/base |
+| R13 | Batch B is crafted from our own copies of corpus documents plus files we write | Resolved (A03 plan) | planted problems are controlled; files committed under corpus/batch_b/ |
