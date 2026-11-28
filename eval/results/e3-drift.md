@@ -37,3 +37,24 @@ What changed and why, question by question:
   0 for correctness.
 - **Abstention and citation validity hold at 1.00**: the relevance floor and the citation
   check are unaffected by the new data.
+
+## Follow-up: the golden set re-labelled to the current fee schedule
+
+Measured again on the final 44-question golden set (eval/results/final-44-summary.md), then
+after re-labelling the five questions that pointed at the archived 2026-27 fee page (each
+keeps its old labels under `previous` in eval/golden.jsonl):
+
+- q10, q14, q15, q21 now point at b08's Refunds, Tuition and Other dues sections, expecting
+  "80", "13,500", "2,500" and "15,000" (q21's history turn says Rs. 13,500 to match);
+- q22 keeps only the handbook's Freezing of Semester rule: b08 lists no freeze fee, so the
+  amount is no longer answerable from current documents.
+
+| collection `rahbar` (with Batch B) | recall@3 | recall@5 | MRR | faithfulness | abstention | citation validity |
+| --- | --- | --- | --- | --- | --- | --- |
+| old fee labels (`*-after-batch-b-44.json`) | 0.719 | 0.781 | 0.652 | 0.809 | 1.00 | 1.00 |
+| re-labelled (`*-after-batch-b-relabelled.json`) | 0.844 | 0.906 | 0.777 | 0.809 | 1.00 | 1.00 |
+
+The 12.5-point recovery confirms the diagnosis: retrieval found the current fee schedule all
+along, and the drop was the test set describing a document version that is now archived. The
+lesson for the data lifecycle: when ingestion archives a version, the golden questions that
+cite it must be re-labelled in the same change, or the gate measures the past.
