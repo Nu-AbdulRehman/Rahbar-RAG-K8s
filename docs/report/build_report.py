@@ -9,6 +9,7 @@ each section names. The appendix embeds docs/report/screenshots/*.png uncropped.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -24,7 +25,12 @@ from reportlab.platypus import (Image, KeepTogether, PageBreak, Paragraph, Simpl
 HERE = Path(__file__).resolve().parent
 SHOTS = HERE / "screenshots"
 OUT = HERE / "RAGOps-Report.pdf"
-FONTS = Path("C:/Windows/Fonts")
+# Times New Roman's four TTFs: Windows has them; on Linux install ttf-mscorefonts-installer
+# (/usr/share/fonts/truetype/msttcorefonts) or set TNR_FONTS to a folder holding them.
+FONTS = Path(os.environ.get("TNR_FONTS") or next(
+    (d for d in ("C:/Windows/Fonts", "/usr/share/fonts/truetype/msttcorefonts",
+                 "/Library/Fonts/Microsoft") if Path(d, "times.ttf").exists()),
+    "C:/Windows/Fonts"))
 
 for name, file in (("TNR", "times.ttf"), ("TNR-B", "timesbd.ttf"),
                    ("TNR-I", "timesi.ttf"), ("TNR-BI", "timesbi.ttf")):
