@@ -1,0 +1,31 @@
+$ kubectl exec -n rahbar deploy/api -- python -m app.tools.trace_summary --since 2026-11-28T10:59 --until 2026-11-28T11:00
+trace summary  since 2026-11-28T10:59  until 2026-11-28T11:00  (first 2026-11-28T10:59:12.188Z, last 2026-11-28T10:59:18.150Z)
+queries 6   outcomes {"abstained": 2, "answered": 3, "cached": 1}
+abstention rate 0.333   decline rate 0.000   fallback rate 0.000
+cache hit rate 0.200  (hit 1, miss 4, skipped 1)
+injection attempts flagged 1 {"question": 1} in 1 queries
+collection / embedding model: {"rahbar / nomic-embed-text": 6}
+
+top-1 similarity  n 5  min 0.581  p25 0.619  p50 0.668  p75 0.778  max 0.856  mean 0.700
+  0.00-0.30     0  
+  0.30-0.40     0  
+  0.40-0.50     0  
+  0.50-0.55     0  
+  0.55-0.60     1  ##############################
+  0.60-0.65     1  ##############################
+  0.65-0.70     1  ##############################
+  0.70-0.75     0  
+  0.75-0.80     1  ##############################
+  0.80-0.85     0  
+  0.85-0.90     1  ##############################
+  0.90-0.95     0  
+  0.95-1.00     0  
+
+| stage | n | p50 ms | p95 ms |
+| --- | --- | --- | --- |
+| cache | 5 | 10.300 | 27.000 |
+| embed | 5 | 0.000 | 8.200 |
+| retrieve | 5 | 4.600 | 5.500 |
+| generate | 3 | 1973.700 | 2024.500 |
+| summary | 6 | 0.000 | 0.000 |
+| total | 6 | 19.900 | 2035.400 |

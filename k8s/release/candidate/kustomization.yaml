@@ -1,0 +1,15 @@
+# The candidate template (RAGOps F3). Not applied on its own: apply k8s/release/k6 or
+# k8s/release/minilm, which set the candidate's values.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rahbar
+resources:
+  - api-candidate.yaml
+  - index-candidate.yaml
+configMapGenerator:
+  - name: candidate-config
+    literals:
+      - CACHE=none                     # never share the live cache: a candidate's answers are untested
+images:
+  - {name: rahbar-api, newTag: dev}
+  - {name: rahbar-indexer, newTag: dev}

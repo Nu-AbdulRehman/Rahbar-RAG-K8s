@@ -1,0 +1,34 @@
+# The RAGOps volumes (F1, decisions R4 and R5). Both survive pod restarts and Job reruns.
+#
+#   ragops-data      the data lake: catalog.json, incoming/, raw/, archive/<doc_id>/<ver>/,
+#                    quarantine/ (with <file>.reason.json), reports/ (verify-*, ingest-*),
+#                    signatures.json (uniqueness vectors). Written only by the ingestion Job
+#                    and CronJob (and the candidate index Job); nothing else mounts it.
+#   ragops-results   eval/ (suite result files), gate/ (gate decisions) and traces/ (one
+#                    traces-<date>-<pod>.jsonl per api pod). Written by the eval Job, the gate
+#                    Job and every api pod; read back with kubectl cp for commit (R5).
+#
+# ReadWriteOnce: on minikube's single node every pod that mounts one of these runs on the
+# same node, which RWO allows. A multi-node cluster would need ReadWriteMany (NFS, CephFS)
+# for ragops-results, because the api replicas would spread across nodes.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ragops-data
+  labels: {app: ragops}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi                     # the corpus is about 40 MB; archive versions and reports add little
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ragops-results
+  labels: {app: ragops}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi                     # a 44-question result is about 150 KB; a trace about 10 KB

@@ -1,0 +1,60 @@
+# Builds the candidate's collection (R9: the ingestion Job is the only writer to Chroma, for
+# every collection). The live indexer's image, pod and limits; its environment differs only
+# by candidate-config (CHROMA_COLLECTION and, for an embedding change, EMBED_MODEL). It reads
+# the same data lake and fetches nothing: the live Job has filled raw/.
+# Build candidates BEFORE a new batch goes into incoming/: every run's intake moves
+# incoming/ into raw/, so a later build would hold documents the baseline does not.
+# Each overlay renames it (index-rahbar-k6, index-rahbar-minilm): a Job's template cannot
+# change, so two candidates need two Jobs.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: index-candidate
+  labels: {app: indexer, role: candidate}
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 3600
+  template:
+    metadata:
+      labels: {app: indexer, role: candidate}   # app: indexer, so the indexer NetworkPolicy applies
+    spec:
+      restartPolicy: Never
+      serviceAccountName: indexer
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: indexer
+          image: rahbar-indexer
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "pipeline.run"]
+          envFrom:
+            - configMapRef: {name: rahbar-config}
+            - configMapRef: {name: ragops-gate}
+            - configMapRef: {name: candidate-config}
+          volumeMounts:
+            - {name: data-lake, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+          resources:                  # the live indexer's (docs/evidence/kubectl-top.txt): same documents, same OCR
+            requests:
+              cpu: 500m
+              memory: 1280Mi
+            limits:
+              cpu: "2"
+              memory: 1792Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data-lake
+          persistentVolumeClaim: {claimName: ragops-data}
+        - name: tmp
+          emptyDir: {}

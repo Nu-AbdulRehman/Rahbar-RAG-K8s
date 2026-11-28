@@ -20,5 +20,7 @@ documents into `<DATA_LAKE_DIR>/incoming/` and running the ingestion Job (or
 | b11-scanned-notice-ocr.txt | garbled text, as from a bad OCR | quality fail, completeness fail | quarantine |
 | b12-student-counselling.md | none (new topic: counselling) | all pass | index |
 
-Until Member 2's uniqueness check lands, b02, b04 and b05 are indexed and the report shows
-uniqueness as "not run"; that gap is the honest state of A1 at this point, not a pass.
+The uniqueness check (Member 2) catches b02 and b04 as exact duplicates (same SHA-256) and
+b05 as a near duplicate (cosine 0.9997 against b03, threshold 0.98). On the cluster the
+ingestion Job quarantined exactly the six files the table expects
+(eval/results/f/09-batch-b-ingestion-job.txt).

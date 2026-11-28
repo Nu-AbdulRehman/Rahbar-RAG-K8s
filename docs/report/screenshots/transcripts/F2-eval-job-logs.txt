@@ -1,0 +1,33 @@
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ kubectl get job suite-baseline-cluster -n rahbar
+NAME                     STATUS     COMPLETIONS   DURATION   AGE
+suite-baseline-cluster   Complete   1/1           2m28s      69m
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ kubectl logs -n rahbar job/suite-baseline-cluster
+run 1 of 2 done
+run 2 of 2 done
+| level | metric | value |
+| --- | --- | --- |
+| module | paraphrase mean cosine | 0.760 |
+| module | unrelated mean cosine | 0.367 |
+| module | gap | 0.393 |
+| module | embed ms per chunk (mean) | 23.790 |
+| module | determinism max |diff| | 0.000 |
+| component | recall@3 | 0.500 |
+| component | recall@5 | 0.562 |
+| component | MRR | 0.465 |
+| component | nDCG@5 | 0.490 |
+| component | recall@5 with typos | 0.578 |
+| component | MRR with typos | 0.474 |
+| end-to-end | faithfulness | 0.786 |
+| end-to-end | abstention correctness | 1.000 |
+| end-to-end | citation validity | 1.000 |
+| end-to-end | latency p50 (s) | 1.625 |
+| end-to-end | latency p95 (s) | 3.250 |
+
+stochasticity (run 2 - run 1), non-zero only: {
+ "module.embed_ms_per_chunk_mean": -1.02,
+ "module.embed_ms_per_chunk_p95": -0.93,
+ "end_to_end.latency_p50_s": -0.094,
+ "end_to_end.latency_p95_s": -0.163
+}
+
+results written to /results/eval/20261128T105812Z-baseline-cluster.json

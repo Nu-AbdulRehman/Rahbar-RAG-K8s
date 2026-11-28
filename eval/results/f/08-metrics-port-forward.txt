@@ -1,0 +1,36 @@
+$ kubectl port-forward -n rahbar svc/api 18000:8000 &
+$ curl -s localhost:18000/metrics | grep -E "^rahbar_(top1_similarity|injections_flagged|stage_seconds_count|abstentions|cache_hit_ratio|cache_lookups)"
+rahbar_abstentions_total 2.0
+rahbar_abstentions_created 1.795863102298776e+09
+rahbar_cache_hit_ratio 0.2
+rahbar_cache_lookups_total{result="miss"} 4.0
+rahbar_cache_lookups_total{result="skipped"} 1.0
+rahbar_cache_lookups_total{result="hit"} 1.0
+rahbar_cache_lookups_created{result="miss"} 1.7958635521976361e+09
+rahbar_cache_lookups_created{result="skipped"} 1.7958635560688558e+09
+rahbar_cache_lookups_created{result="hit"} 1.7958635581704493e+09
+rahbar_stage_seconds_count{stage="cache"} 5.0
+rahbar_stage_seconds_count{stage="embed"} 5.0
+rahbar_stage_seconds_count{stage="retrieve"} 5.0
+rahbar_stage_seconds_count{stage="generate"} 3.0
+rahbar_stage_seconds_count{stage="summary"} 6.0
+rahbar_top1_similarity_bucket{le="0.3"} 0.0
+rahbar_top1_similarity_bucket{le="0.4"} 0.0
+rahbar_top1_similarity_bucket{le="0.5"} 0.0
+rahbar_top1_similarity_bucket{le="0.55"} 0.0
+rahbar_top1_similarity_bucket{le="0.6"} 1.0
+rahbar_top1_similarity_bucket{le="0.65"} 2.0
+rahbar_top1_similarity_bucket{le="0.7"} 3.0
+rahbar_top1_similarity_bucket{le="0.75"} 3.0
+rahbar_top1_similarity_bucket{le="0.8"} 4.0
+rahbar_top1_similarity_bucket{le="0.85"} 4.0
+rahbar_top1_similarity_bucket{le="0.9"} 5.0
+rahbar_top1_similarity_bucket{le="0.95"} 5.0
+rahbar_top1_similarity_bucket{le="1.0"} 5.0
+rahbar_top1_similarity_bucket{le="+Inf"} 5.0
+rahbar_top1_similarity_count 5.0
+rahbar_top1_similarity_sum 3.5021
+rahbar_top1_similarity_created 1.7958631022988222e+09
+rahbar_injections_flagged_total{source="question"} 1.0
+rahbar_injections_flagged_created{source="question"} 1.795863558131262e+09
+(metrics come from one of the 3 pods, the one port-forward picked)

@@ -89,6 +89,7 @@ jobs:
           - {image: rahbar-api, context: api, file: api/Dockerfile}
           - {image: rahbar-indexer, context: ., file: indexer/Dockerfile}
           - {image: rahbar-ui, context: ui, file: ui/Dockerfile}
+          - {image: rahbar-eval, context: ., file: eval/Dockerfile}   # RAGOps: suite + gate (F2)
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -114,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [rahbar-api, rahbar-indexer, rahbar-ui]
+        image: [rahbar-api, rahbar-indexer, rahbar-ui, rahbar-eval]
     steps:
       - uses: actions/download-artifact@v4
         with:

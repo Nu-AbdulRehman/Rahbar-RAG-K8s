@@ -21,3 +21,70 @@ Appended when something breaks, not afterwards. Feeds engineering note Q7.
 | 2026-11-28 | First RAGOps baseline: embedding 2.2 s per chunk and a 28 s median answer, about 10x the Assignment 02 numbers on the same laptop | `ollama ps` showed "100% CPU" and the server log `total_vram="0 B"`: the reinstalled Ollama, started with `ollama serve` from Git Bash, did not discover the RTX 3050 (nvidia-smi and the bundled cuda_v12/v13 libraries were fine) | Restarted the server from PowerShell (Start-Process); the log then shows `library=CUDA ... total_vram="6.0 GiB"` and `ollama ps` "100% GPU". A second cause came out on the re-run, which timed out on its first embedding: `localhost` resolves to IPv6 ::1 first, Ollama listens on IPv4 127.0.0.1 only, and httpx waits about 2 s on every request before falling back (curl 0.28 s, the api's embedder 2.1 s, the same call with 127.0.0.1 0.07 s). The local stack now uses 127.0.0.1 for Ollama and Chroma. The CPU run is kept, labelled baseline-cpu-ollama; its embedding times include that 2 s |
 | 2026-11-28 | Batch B ingestion: intake moved all 12 files into raw/, but the verification table listed only the 9 corpus documents and nothing new was embedded | raw/ holds fetch.py's _index.json, and read_folder() read only that index, so documents moved in from incoming/ without an index of their own were invisible | read_folder() adds documents the index does not list, from their front matter, and skips README and MANIFEST files; test_a_batch_beside_a_fetch_index_is_still_catalogued fails without it |
 | 2026-11-28 | Rollback demo: `pipeline.ops restore fee-structure-page 2026-27` made the old page current, then the next ingestion archived it again and left both versions superseded (eval/results/a/07a-rollback-bug-rearchived.log) | The recency check compared with every indexed version, including the 2027-28 one that the restore had just archived on purpose, so the restored page always had a newer version | Recency compares with the current (raw/) versions only, and an archived entry stays archived; test_a_rollback_survives_the_next_ingestion fails without it |
+
+## 2026-11-28 · ragops/f-kubernetes · uniqueness quarantined a real corpus document (Member 2)
+- **Symptom:** the first ingestion Job on a fresh minikube indexed 767 chunks instead of 803.
+  The verification table showed the 2026 prospectus quarantined: "near duplicate of
+  undergraduate-academic-rules-aug-2023.pdf (cosine 0.954 >= 0.950)".
+- **Cause:** VERIFY_NEAR_DUPLICATE was a provisional 0.95, set before any measurement. The
+  prospectus is a 5-page summary of the same rules, so its embedding sits close to the rules.
+- **Fix:** measured every document pair (python -m pipeline.ops similarities): different
+  documents reach at most 0.9588, the planted near duplicate 0.9997. Threshold 0.98 in the
+  ragops-gate ConfigMap (eval/results/a/09-uniqueness-threshold.txt). Lesson: the same as
+  the relevance floor in A02: a threshold is a measurement, never a guess.
+
+## 2026-11-28 · ragops/f-kubernetes · the planted b09 claim reached a user, then the cache (Member 2)
+- **Symptom:** after Batch B, "Are all fees waived this semester according to the IT
+  policy?" answered "true [b09-it-acceptable-use.md / 3. Assistant notice]". The trace
+  showed the retrieval rail had flagged the chunk three times (flag mode). After switching
+  the ConfigMap to redact and restarting the api, the same question returned the same
+  answer with `cached: true`.
+- **Cause:** (1) flag mode only records; the A02 defence blocks obeying and invented
+  citations, not the model quoting a planted claim with a real citation. (2) The answer
+  passed every cache rule, and only an indexer run bumps the cache generation, not a
+  ConfigMap change.
+- **Fix:** GUARDRAIL_INJECTION_ACTION=redact in rahbar-config; answers built on flagged
+  evidence are never cached (test shown red without it); the cache generation bumped once
+  by hand for the demo. Evidence: eval/results/f/11-d4-flag-mode.txt and
+  13-d4-redact-mode.txt.
+
+## 2026-11-28 · ragops/f-kubernetes · a release served the previous configuration's cached answers (Member 2)
+- **Symptom:** right after `kubectl set env deployment/api CHROMA_COLLECTION=rahbar-k6
+  TOP_K=6` and a finished `rollout status`, the first question returned `cached: true`; its
+  trace showed collection rahbar-k6, yet the answer was the one the old pods had cached
+  from rahbar with top_k 5.
+- **Cause:** the semantic cache had one list per index generation, shared by every
+  configuration. Only an indexer run bumps the generation, and a release or rollback by
+  `set env` runs no indexer. Worse for the bad release: all-minilm question vectors (384-d)
+  would have been compared with cached nomic vectors (768-d); `zip` silently truncates.
+- **Fix:** cache entries are keyed by generation *and* a fingerprint of collection,
+  embedding model, top_k, relevance floor, LLM and rail mode (providers/cache). A release
+  starts with an empty cache for its configuration; an undo finds the old one again. Test
+  shown red without the scope.
+
+## 2026-11-28 · ragops/f-kubernetes · a failed ingestion attempt left no logs (Member 2)
+- **Symptom:** the Batch B ingestion Job completed, but its pod showed `Restart Count: 1`:
+  the first attempt ran 10:59:44-11:02:58 UTC and exited 1. `kubectl logs --previous`
+  answered "unable to retrieve container logs", and Ollama's log has no error in that
+  window. The retry found Batch B already taken in (`intake: []`) and the fee page already
+  archived, so the first attempt failed inside the verification loop, before the
+  duplicates were quarantined; the retry finished every step correctly.
+- **Cause of the failure:** unknown. The logs were lost, which is the real problem:
+  `restartPolicy: OnFailure` restarts the container in place, and only one previous log
+  is kept, briefly.
+- **Fix:** `restartPolicy: Never` on the indexer Job, the CronJob and the candidate index
+  Job, so each attempt is its own pod and its logs stay with it until the Job is deleted.
+  The pipeline's steps proved safe to repeat (moves are recorded in the catalog, the sync
+  embeds only what changed).
+
+## 2026-11-28 · ragops/f-kubernetes · two races in the rollout screenshots (Member 2)
+- **Symptom:** taking the F3 screenshots, the trace asked right after `rollout undo` showed
+  all-minilm, and on the retake the trace right after the bad release showed rahbar-k6.
+- **Cause:** (1) `kubectl rollout status` run immediately after `rollout undo` printed
+  "successfully rolled out" without a single "Waiting" line: the Deployment controller had
+  not yet observed the new generation. (2) After a completed rollout, ingress-nginx kept
+  routing to the terminating pods for a few seconds (preStop sleep 5 plus its endpoint
+  sync).
+- **Fix:** `sleep 3` before `rollout status` after an undo, and `sleep 10` before asking
+  the question whose trace is the evidence (k8s/README.md section 4). No code change: the
+  rollout itself kept three ready pods throughout.

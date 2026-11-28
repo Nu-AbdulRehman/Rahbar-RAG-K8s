@@ -1,0 +1,57 @@
+# A pod that mounts both RAGOps volumes, for kubectl cp in and out (R5) and the lake's
+# operations. It has no NetworkPolicy allow rule, so it can reach nothing; it runs the
+# indexer image (which has tar for kubectl cp and pipeline.ops), as the same user.
+#
+#   kubectl apply -f k8s/tools/ragops-shell.yaml
+#   kubectl wait -n rahbar --for=condition=Ready pod/ragops-shell
+#   kubectl cp corpus/batch_b/b01-library-rules.md rahbar/ragops-shell:/data/incoming/
+#   kubectl exec -n rahbar ragops-shell -- python -m pipeline.ops status
+#   kubectl cp rahbar/ragops-shell:/results/traces ./traces
+#   kubectl delete -f k8s/tools/ragops-shell.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ragops-shell
+  namespace: rahbar
+  labels: {app: ragops-shell}
+spec:
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: shell
+      image: rahbar-indexer:dev
+      imagePullPolicy: IfNotPresent
+      command: ["sleep", "86400"]      # a day, then it exits; delete it when done
+      env:
+        - {name: DATA_LAKE_DIR, value: /data}
+        - {name: CORPUS_DIR, value: /data/raw}
+      volumeMounts:
+        - {name: data-lake, mountPath: /data}
+        - {name: results, mountPath: /results}
+        - {name: tmp, mountPath: /tmp}
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 250m
+          memory: 256Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+  volumes:
+    - name: data-lake
+      persistentVolumeClaim: {claimName: ragops-data}
+    - name: results
+      persistentVolumeClaim: {claimName: ragops-results}
+    - name: tmp
+      emptyDir: {}

@@ -1,0 +1,62 @@
+$ kubectl apply -k k8s/overlays/dev   # fresh namespace, 10:38:18 UTC
+$ kubectl wait -n rahbar --for=condition=complete job/indexer   # met 10:43:11 UTC
+$ kubectl logs -n rahbar job/indexer
+  fetch   Undergraduate Academic Rules (Aug 2023)
+          undergraduate-academic-rules-aug-2023.pdf, 14,888,226 bytes
+  fetch   Academic Rules Handbook (Jun 2026)
+    RemoteProtocolError; retrying in 4s (1/2)
+          academic-rules-handbook-jun-2026.pdf, 987,731 bytes
+  fetch   Prospectus 2026 - Academic Rules and Regulations
+          prospectus-2026-academic-rules-and-regulations.pdf, 7,066,767 bytes
+  fetch   Student Handbook (Jun 2026)
+          student-handbook-jun-2026.pdf, 1,980,275 bytes
+  fetch   Annual Report 2019-20
+          annual-report-2019-20.pdf, 891,216 bytes
+  fetch   Annual Report 2023-24
+          annual-report-2023-24.pdf, 5,100,456 bytes
+  fetch   Fee Structure page
+          fee-structure-page.html, 91,429 bytes
+  fetch   Grading page
+          grading-page.html, 95,673 bytes
+  fetch   Faculty Entrepreneurship and Technical Start-ups Policy
+          faculty-entrepreneurship-and-technical-start-ups-policy.pdf, 3,872,809 bytes
+
+9 documents in /data/raw, manifest written to /data/raw/MANIFEST.md
+  ok        undergraduate-academic-rules-aug-2023.pdf
+  ok        academic-rules-handbook-jun-2026.pdf
+  ok        prospectus-2026-academic-rules-and-regulations.pdf
+  ok        student-handbook-jun-2026.pdf
+  ok        annual-report-2019-20.pdf
+  ok        annual-report-2023-24.pdf
+  ok        fee-structure-page.html
+  ok        grading-page.html
+  ok        faculty-entrepreneurship-and-technical-start-ups-policy.pdf
+
+9 of 9 match the manifest
+{"ts": "2026-11-28T10:41:44Z", "logger": "rahbar.indexer", "msg": "indexer starting", "dummy": false, "embed_model": "nomic-embed-text", "collection": "rahbar", "chroma": "chroma:8000", "pod": "indexer-646d2"}
+{"ts": "2026-11-28T10:41:44Z", "logger": "rahbar.indexer", "msg": "data lake", "run": "20261128T104144Z", "intake": [], "added": ["undergraduate-academic-rules-aug-2023.pdf", "academic-rules-handbook-jun-2026.pdf", "prospectus-2026-academic-rules-and-regulations.pdf", "student-handbook-jun-2026.pdf", "annual-report-2019-20.pdf", "annual-report-2023-24.pdf", "fee-structure-page.html", "grading-page.html", "faculty-entrepreneurship-and-technical-start-ups-policy.pdf"], "deleted": []}
+{"ts": "2026-11-28T10:42:27Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "undergraduate-academic-rules-aug-2023.pdf", "chunks": 55, "action": "archive", "ocr_pages": 24}
+{"ts": "2026-11-28T10:42:33Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "academic-rules-handbook-jun-2026.pdf", "chunks": 99, "action": "index", "ocr_pages": 5}
+{"ts": "2026-11-28T10:42:34Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "prospectus-2026-academic-rules-and-regulations.pdf", "chunks": 36, "action": "index", "ocr_pages": 0}
+{"ts": "2026-11-28T10:42:39Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "student-handbook-jun-2026.pdf", "chunks": 117, "action": "index", "ocr_pages": 4}
+{"ts": "2026-11-28T10:42:42Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "annual-report-2019-20.pdf", "chunks": 95, "action": "index", "ocr_pages": 0}
+{"ts": "2026-11-28T10:42:48Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "annual-report-2023-24.pdf", "chunks": 357, "action": "index", "ocr_pages": 0}
+{"ts": "2026-11-28T10:42:49Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "fee-structure-page.html", "chunks": 10, "action": "index", "ocr_pages": 0}
+{"ts": "2026-11-28T10:42:49Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "grading-page.html", "chunks": 11, "action": "index", "ocr_pages": 0}
+{"ts": "2026-11-28T10:42:58Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "faculty-entrepreneurship-and-technical-start-ups-policy.pdf", "chunks": 23, "action": "index", "ocr_pages": 8}
+document                                     quality      completeness recency      uniqueness   action
+-------------------------------------------------------------------------------------------------------
+undergraduate-academic-rules-aug-2023.pdf    pass         pass         fail         pass         archive
+    recency: newer version 2026-06 of 'academic-rules' exists (academic-rules-handbook-jun-2026.pdf)
+academic-rules-handbook-jun-2026.pdf         pass         pass         pass         pass         index
+prospectus-2026-academic-rules-and-regulatio pass         pass         pass         pass         index
+student-handbook-jun-2026.pdf                pass         pass         pass         pass         index
+annual-report-2019-20.pdf                    pass         pass         pass         pass         index
+annual-report-2023-24.pdf                    pass         pass         pass         pass         index
+fee-structure-page.html                      pass         pass         pass         pass         index
+grading-page.html                            pass         pass         pass         pass         index
+faculty-entrepreneurship-and-technical-start pass         pass         pass         pass         index
+{"ts": "2026-11-28T10:42:58Z", "logger": "rahbar.indexer", "msg": "verification", "report": "/data/reports/verify-20261128T104144Z.json", "indexed": 9, "quarantined": 0, "archived": 1, "uniqueness_texts_embedded": 62}
+{"ts": "2026-11-28T10:42:58Z", "logger": "rahbar.indexer", "msg": "chunking done", "chunks": 803, "chunk_size": 150, "chunk_overlap": 30, "storage_amplification": 1.122}
+{"ts": "2026-11-28T10:43:08Z", "logger": "rahbar.indexer", "msg": "store", "collection": "rahbar", "embedded": 803, "metadata_updated": 0, "unchanged": 0, "deleted": 0, "total": 803, "rebuilt": true}
+{"ts": "2026-11-28T10:43:08Z", "logger": "rahbar.indexer", "msg": "indexer finished", "chunks": 803, "cache_generation": 1, "seconds": 83.9}

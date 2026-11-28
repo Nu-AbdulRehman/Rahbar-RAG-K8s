@@ -1,0 +1,19 @@
+# The baseline as a candidate: the live settings (rahbar, 150/30, nomic-embed-text,
+# top_k 5) on the api-candidate Deployment, so the baseline is measured exactly like every
+# candidate: CACHE=none, one replica, its own Service. The live api runs the semantic
+# cache, which would turn a second seeded run into cache hits. Its index Job writes the
+# live collection again, which an unchanged corpus makes a no-op (embedded 0).
+#   kubectl apply -k k8s/release/baseline
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../candidate
+configMapGenerator:
+  - name: candidate-config
+    behavior: merge
+    literals:
+      - CHROMA_COLLECTION=rahbar
+patches:
+  - target: {kind: Job, name: index-candidate}
+    patch: |-
+      - {op: replace, path: /metadata/name, value: index-rahbar}
