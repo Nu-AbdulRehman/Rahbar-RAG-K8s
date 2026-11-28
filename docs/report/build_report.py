@@ -208,7 +208,7 @@ S += [p("Part B. Offline testing at three levels", H2),
            "74.8 ms; 0.0", "57.2 ms; 0.0"],
           ["Component", "recall@3 / recall@5 / MRR / nDCG@5", "0.500 / 0.562 / 0.465 / 0.490",
            "0.625 / 0.688 / 0.569 / 0.600"],
-          ["Component", "recall@5 with typos (15 % of words, seed 42)", "0.547", "0.656"],
+          ["Component", "Noise test, typos in 15 % of query words (seed 42): change in recall@3 / recall@5 / MRR / nDCG@5", "-0.047 / -0.016 / +0.004 / -0.001", "recall@5 -0.032 (0.688 to 0.656)"],
           ["End-to-end", "Faithfulness (llama3.2:3b judge)", "0.786 (11 of 14)",
            "0.714 (10 of 14)"],
           ["End-to-end", "Abstention correctness (12 unanswerable); citation validity",
@@ -233,16 +233,17 @@ S += [p("Part C. Change experiment and release gate", H2),
         "variant, so the measured change is top_k 5 to 6 (decision R10b). all-minilm is the "
         "deliberately bad candidate."),
       table([
-          ["Candidate", "Env", "recall@5", "MRR", "Faithfulness", "Answered", "p50 s", "Gate"],
-          ["Baseline (150/30, nomic-embed-text, top_k 5)", "cluster", "0.562", "0.465",
+          ["Candidate", "Env", "Module gap", "recall@5", "MRR", "Faithfulness", "Answered", "p50 s", "Gate"],
+          ["Baseline (150/30, nomic-embed-text, top_k 5)", "cluster", "0.392", "0.562", "0.465",
            "0.786", "14", "2.24", "n/a"],
-          ["<b>top_k 6</b>", "cluster", "0.562", "0.465", "0.714", "14", "2.44", "<b>PASS</b>"],
-          ["all-minilm", "cluster", "0.469", "0.438", "0.667", "12", "0.08", "<b>FAIL</b>"],
-          ["chunks 200/40", "local", "0.641 (base 0.688)", "0.552", "0.733", "", "2.38", "FAIL"],
-          ["overlap 40", "local", "0.625", "0.544", "0.812", "", "2.24", "FAIL"],
-      ], [2.0, 0.65, 0.95, 0.55, 0.85, 0.8, 0.55, 0.6]),
-      p("top_k 6 leaves the top five unchanged, so every retrieval metric is identical; the "
-        "difference is only end-to-end. On both members' clusters it declined q41 (semester "
+          ["<b>top_k 6</b>", "cluster", "0.392", "0.562", "0.465", "0.714", "14", "2.44", "<b>PASS</b>"],
+          ["all-minilm", "cluster", "<b>0.585</b>", "0.469", "0.438", "0.667", "12", "0.08", "<b>FAIL</b>"],
+          ["chunks 200/40", "local", "0.392", "0.641 (base 0.688)", "0.552", "0.733", "", "2.38", "FAIL"],
+          ["overlap 40", "local", "0.392", "0.625", "0.544", "0.812", "", "2.24", "FAIL"],
+      ], [1.75, 0.6, 0.65, 0.95, 0.55, 0.85, 0.8, 0.5, 0.55]),
+      p("All three levels: the module level changes only with the embedding model (all-minilm's "
+        "better gap, yet worse retrieval, Q4 b); top_k 6 leaves the top five unchanged, so every "
+        "retrieval metric is identical and the difference is only end-to-end. On both members' clusters it declined q41 (semester "
         "freeze), which the baseline answered with the right chunk at rank 1: the sixth passage "
         "was loosely related and llama3.2:3b declined, the safe failure. It answered q26 and q43, "
         "which the baseline declined, with mixed support.",
@@ -448,11 +449,10 @@ S += [p("5. Contributions and AI statement", H1),
            "golden questions and 8 reviews; report sections C2, D, F and Q4 c, e, f."],
       ], [1.6, 5.3]),
       Spacer(1, 6),
-      p("<b>AI statement.</b> We used Claude Code (Anthropic) to draft code, tests, manifests, "
-        "synthetic golden questions and report text, under our direction. Each use is logged "
-        "with what we changed in docs/AI-USAGE.md. The hand-written questions, the hand labels, "
-        "the reviews of synthetic questions, every design decision and the screenshots are our "
-        "own; every number was produced by our own runs.")]
+      p("<b>AI statement.</b> We used Claude Code to draft code, tests, manifests, synthetic "
+        "golden questions and report text under our direction; each use and what we changed is "
+        "logged in docs/AI-USAGE.md. Hand-written questions, hand labels, reviews, design "
+        "decisions, screenshots and every run are our own.")]
 
 # --- Appendix ------------------------------------------------------------------------
 APPENDIX = [
