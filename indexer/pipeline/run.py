@@ -18,6 +18,7 @@ from pathlib import Path
 
 from .config import IndexerSettings, get_settings
 from .invalidate import invalidate_cache
+from .lake import Lake
 from .models import Chunk
 
 
@@ -67,16 +68,23 @@ def discover(corpus_dir: str) -> list[tuple[Path, str, bool]]:
 def run_pipeline(settings: IndexerSettings) -> int:
     """Ingest, verify, update the data lake, update the retrieval source (RAGOps A1, A2;
     paper Figure 3). Returns the number of chunks in the collection afterwards."""
+    lake = Lake(settings.data_lake_dir, settings.corpus_dir)
+    held = lake.lock()             # one run per lake at a time; released on return
+    try:
+        return _run(settings, lake)
+    finally:
+        held.close()
+
+
+def _run(settings: IndexerSettings, lake: Lake) -> int:
     from .chunk import chunk
     from .clean import clean
     from .embed import embed
     from .extract import extract
-    from .lake import Lake
     from .store import sync
     from .verify import Check, Duplicates, completeness, decide, quality, recency, table
 
     run_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    lake = Lake(settings.data_lake_dir, settings.corpus_dir)
     taken = lake.intake()
     changes = lake.refresh()
     log("data lake", run=run_id, intake=taken, **changes)

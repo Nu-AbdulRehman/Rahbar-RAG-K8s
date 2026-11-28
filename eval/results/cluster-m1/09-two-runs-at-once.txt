@@ -1,0 +1,16 @@
+$ kubectl create job --from=cronjob/reindex run-a -n rahbar; kubectl create job --from=cronjob/reindex run-b -n rahbar
+job.batch/run-a created
+job.batch/run-b created
+$ kubectl wait -n rahbar --for=condition=complete job/run-a job/run-b --timeout=20m
+job.batch/run-a condition met
+job.batch/run-b condition met
+$ kubectl get job run-a run-b -n rahbar
+NAME    STATUS     COMPLETIONS   DURATION   AGE
+run-a   Complete   1/1           6m11s      6m11s
+run-b   Complete   1/1           3m11s      6m11s
+$ kubectl logs -n rahbar job/run-a | grep -E 'data lake|store'
+{"ts": "2026-11-28T14:00:19Z", "logger": "rahbar.indexer", "msg": "data lake", "run": "20261128T140019Z", "intake": [], "added": [], "deleted": []}
+{"ts": "2026-11-28T14:03:20Z", "logger": "rahbar.indexer", "msg": "store", "collection": "rahbar", "embedded": 0, "metadata_updated": 0, "unchanged": 803, "deleted": 0, "total": 803, "rebuilt": false}
+$ kubectl logs -n rahbar job/run-b | grep -E 'data lake|store'
+{"ts": "2026-11-28T13:57:15Z", "logger": "rahbar.indexer", "msg": "data lake", "run": "20261128T135715Z", "intake": [], "added": [], "deleted": []}
+{"ts": "2026-11-28T14:00:19Z", "logger": "rahbar.indexer", "msg": "store", "collection": "rahbar", "embedded": 0, "metadata_updated": 0, "unchanged": 803, "deleted": 0, "total": 803, "rebuilt": false}

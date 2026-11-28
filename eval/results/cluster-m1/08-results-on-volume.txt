@@ -1,0 +1,23 @@
+$ kubectl exec -n rahbar ragops-shell -- ls -l /results/eval /results/gate /results/coverage
+/results/coverage:
+total 80
+-rw-r--r-- 1 rahbar rahbar 13609 Nov 28 13:48 20261128T134835Z-coverage-before-cluster.json
+-rw-r--r-- 1 rahbar rahbar 12844 Nov 28 13:48 20261128T134857Z-coverage-after-cluster.json
+-rw-r--r-- 1 rahbar rahbar 12844 Nov 28 13:49 20261128T134918Z-coverage-after-cluster.json
+-rw-r--r-- 1 rahbar rahbar 13609 Nov 28 13:49 20261128T134956Z-coverage-before-cluster.json
+-rw-r--r-- 1 rahbar rahbar 12844 Nov 28 13:50 20261128T135008Z-coverage-after-cluster.json
+
+/results/eval:
+total 484
+-rw-r--r-- 1 rahbar rahbar  27380 Nov 28 13:34 20261128T133413Z-baseline-cluster-faithfulness-sample.jsonl
+-rw-r--r-- 1 rahbar rahbar 128586 Nov 28 13:34 20261128T133413Z-baseline-cluster.json
+-rw-r--r-- 1 rahbar rahbar  28240 Nov 28 13:41 20261128T134117Z-minilm-cluster-faithfulness-sample.jsonl
+-rw-r--r-- 1 rahbar rahbar 119603 Nov 28 13:41 20261128T134117Z-minilm-cluster.json
+-rw-r--r-- 1 rahbar rahbar  33072 Nov 28 13:48 20261128T134817Z-k6-cluster-faithfulness-sample.jsonl
+-rw-r--r-- 1 rahbar rahbar 146700 Nov 28 13:48 20261128T134817Z-k6-cluster.json
+
+/results/gate:
+total 12
+-rw-r--r-- 1 rahbar rahbar 1846 Nov 28 13:34 20261128T133419Z-baseline-cluster-vs-baseline-cluster.json
+-rw-r--r-- 1 rahbar rahbar 1875 Nov 28 13:41 20261128T134118Z-minilm-cluster-vs-baseline-cluster.json
+-rw-r--r-- 1 rahbar rahbar 1838 Nov 28 13:48 20261128T134820Z-k6-cluster-vs-baseline-cluster.json

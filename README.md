@@ -222,7 +222,16 @@ python eval/suite.py --api http://localhost:8001 --collection rahbar-c200 --labe
 
 **E. Drift and coverage:**
 ```bash
-python eval/query_coverage.py --label coverage-before      # exits 1 below the threshold
+python eval/query_coverage.py --label coverage-before --without-category coverage_gap   # before E4: exits 1
+python eval/query_coverage.py --label coverage-after                                     # after E4: exits 0
+kubectl apply -f k8s/coverage-job.yaml      # the same as a Job (set WITHOUT_CATEGORY for "before")
+```
+
+**B / F2. The suite and the gate as one Job** (set the candidate's four values in its `env`,
+see the table at the top of the file):
+```bash
+kubectl apply -f k8s/eval-job.yaml          # Complete when the gate passes, Failed when it rejects
+kubectl logs -n rahbar job/ragops-eval
 ```
 
 **C2. The release gate** (thresholds in `config/gate.yaml`, the same text in the

@@ -88,3 +88,37 @@ Appended when something breaks, not afterwards. Feeds engineering note Q7.
 - **Fix:** `sleep 3` before `rollout status` after an undo, and `sleep 10` before asking
   the question whose trace is the evidence (k8s/README.md section 4). No code change: the
   rollout itself kept three ready pods throughout.
+
+## 2026-11-28 · ragops/m1-cluster · minikube refused to start on Member 1's laptop (Member 1)
+- **Symptom:** `make cluster` exited with `MK_USAGE: Docker Desktop has only 5778MB memory
+  but you specified 6144MB`.
+- **Cause:** the Makefile's `MINIKUBE_MEMORY` default (6144) was set on Member 2's Linux
+  laptop; Docker Desktop on Windows caps the VM below it.
+- **Fix:** `minikube start ... --memory=5120` (or `make cluster MINIKUBE_MEMORY=5120`). The
+  measured requests in eval/results/f5/ fit in 5 GiB.
+
+## 2026-11-28 · ragops/m1-cluster · every ingestion attempt failed: Ollama's name did not resolve (Member 1)
+- **Symptom:** the first `indexer` Job retried five times; each pod ended in
+  `httpx.ConnectError: [Errno -2] Name or service not known` at the uniqueness check, and
+  the api stayed not-ready. From the node, `curl http://192.168.65.254:11434` worked.
+- **Cause:** the cluster was re-created on an existing minikube profile whose container was
+  gone, and the CoreDNS Corefile came up without minikube's `hosts` block for
+  `host.minikube.internal`. The node's /etc/hosts had the name; pods use CoreDNS.
+- **Fix:** add `hosts { 192.168.65.254 host.minikube.internal; fallthrough }` to the
+  `coredns` ConfigMap and restart CoreDNS (an `nslookup` from a pod then returns
+  192.168.65.254). A fresh `minikube delete && make cluster` also restores it.
+
+## 2026-11-28 · ragops/m1-cluster · two ingestion runs at once broke each other (Member 1)
+- **Symptom:** the `indexer` Job and a `reindex` run started together on one data lake.
+  Two `indexer` attempts failed: one with `json.decoder.JSONDecodeError: Expecting value:
+  line 1 column 1` (it read catalog.json while the other run was rewriting it), one with
+  `FileNotFoundError: /data/raw/undergraduate-academic-rules-aug-2023.pdf` (the other run
+  had just archived it). The third attempt succeeded.
+- **Cause:** the CronJob's `concurrencyPolicy: Forbid` only stops the CronJob overlapping
+  itself; a Job created by hand, or the `indexer` Job, can run beside it. The "single writer"
+  WONTFIX in PR #33 assumed one run at a time and nothing enforced it.
+- **Fix:** `Lake.lock()` (flock on `<lake>/.lock`; msvcrt on Windows) is held for the whole
+  run, so a second run waits. Released when the process ends, so a crash leaves no stale
+  lock. Test: indexer/tests/test_lake.py. On the cluster, two runs started together now
+  finish one after the other, both with one attempt and 0 embedded
+  (eval/results/cluster-m1/09-two-runs-at-once.txt).
