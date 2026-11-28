@@ -348,3 +348,26 @@ def test_the_d3_metrics_are_exposed(monkeypatch: pytest.MonkeyPatch) -> None:
     assert 'rahbar_injections_flagged_total{source="question"}' in text
     assert 'rahbar_stage_seconds_count{stage="generate"}' in text
     assert "rahbar_trace_write_failures_total" in text
+
+
+def test_a_ready_pod_learns_the_embedding_digest_for_its_traces() -> None:
+    """Chroma down at boot skips the startup lookup; /readyz fills it in later."""
+    import httpx
+
+    from app.providers.llm.embed import OllamaEmbedder
+    from app.routes.health import _learn_digest
+
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        return httpx.Response(200, json={"models": [
+            {"name": "nomic-embed-text:latest", "digest": "0a109f422b47aaaa"}]})
+
+    embedder = OllamaEmbedder(Settings(), httpx.Client(transport=httpx.MockTransport(handler)))
+    assert embedder.digest is None
+    _learn_digest(embedder)
+    assert embedder.digest == "0a109f422b47" and calls == ["/api/tags"]
+    _learn_digest(embedder)                       # known: no second call
+    assert calls == ["/api/tags"]
+    _learn_digest(None)                           # the stub retriever has no embedder

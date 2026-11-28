@@ -42,8 +42,22 @@ def readyz(request: Request, response: Response) -> dict[str, object]:
         except Exception as exc:
             checks["redis"] = f"unreachable ({type(exc).__name__})"
     failed = {k: v for k, v in checks.items() if v != "ok"}
+    if not failed:
+        _learn_digest(getattr(state, "embedder", None))
     if failed:
         response.status_code = 503
         log.warning("not ready", extra={"failed": failed})
         return {"status": "not ready", "checks": checks}
     return {"status": "ready", "checks": checks}
+
+
+def _learn_digest(embedder: object) -> None:
+    """The embedding model's digest is the trace's embedding version (RAGOps D1). The
+    startup check learns it only if Chroma was up at boot; a ready pod that still lacks it
+    asks Ollama here, once it succeeds. It never decides readiness."""
+    if embedder is None or getattr(embedder, "digest", "") is not None:
+        return
+    try:
+        embedder.lookup_digest()          # type: ignore[attr-defined]
+    except Exception as exc:
+        log.warning("embedding model digest not found", extra={"error": type(exc).__name__})
