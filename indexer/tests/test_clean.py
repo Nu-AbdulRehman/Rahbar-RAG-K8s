@@ -34,3 +34,15 @@ def test_contents_entries_go_but_the_body_heading_stays() -> None:
 def test_lone_clause_numbers_survive_even_when_repeated() -> None:
     pages = [f"6.{i}\n\n{topic} follow the summer rules." for i, topic in enumerate(TOPICS, 1)]
     assert clean(_doc(pages)).pages[0].text.startswith("6.1")
+
+
+def test_cleaning_keeps_the_document_identity() -> None:
+    """doc_id and title ride through clean(), or chunks lose the id that versions share
+    and per-document counts fall back to file names (found on the first real run)."""
+    from pipeline.clean import clean
+    from pipeline.models import Document, Page
+
+    doc = Document("r.md", "2026", False, [Page("r.md", 1, "Rules apply.")],
+                   doc_id="academic-rules", title="Academic Rules")
+    out = clean(doc)
+    assert (out.doc_id, out.title) == ("academic-rules", "Academic Rules")
