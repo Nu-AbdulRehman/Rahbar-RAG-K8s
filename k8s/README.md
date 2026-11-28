@@ -186,6 +186,23 @@ To keep a release, commit it to `k8s/base/configmap.yaml`, so the CronJob also m
 the released collection. Cache entries are keyed by the configuration, so a release or an
 undo never serves the other configuration's cached answers (docs/failure-log.md).
 
+**The eval Job's candidate values.** `k8s/eval-job.yaml` has the candidate's four values
+in its `env` (`LABEL`, `CHROMA_COLLECTION`, `EMBED_MODEL`, `TOP_K`); the table at the top of
+the file lists them for baseline, k6 and minilm. Run the baseline first (`RUNS` 2), so the
+gate has a `baseline-cluster` file to compare against. Measured on Member 1's laptop:
+eval/results/cluster-m1/03-05.
+
+## 4a. Part E on the cluster: coverage
+
+```bash
+kubectl apply -f k8s/coverage-job.yaml      # Complete at or above 85 %, Failed below
+kubectl logs -n rahbar job/ragops-coverage
+```
+
+For the coverage before E4, set `WITHOUT_CATEGORY` to `coverage_gap` and `LABEL` to
+`coverage-before-cluster` in the Job's `env`, and delete the previous Job first. Measured:
+eval/results/cluster-m1/06-07.
+
 ## 5. F5: resources
 
 `kubectl top pods -n rahbar` during an ingestion, an eval run and a query burst; the
@@ -202,6 +219,8 @@ In this order: `kubectl get pods -n rahbar` → `kubectl describe pod` (Events) 
   minikube's `storage-provisioner` addon must be enabled.
 - Indexer `ConnectError` to Ollama: Ollama listens on 127.0.0.1 only, or the host IP is
   not in the NetworkPolicy (section 0).
+- `MK_USAGE: Docker Desktop has only ...MB memory`: Docker Desktop on Windows caps the VM
+  below 6144 MB; `make cluster MINIKUBE_MEMORY=5120` (the measured requests fit).
 - `field is immutable` when re-applying a Job: `kubectl delete job <name> -n rahbar` first.
 - A `rahbar-config` change (e.g. `GUARDRAIL_INJECTION_ACTION`) reaches the api only after
   `kubectl rollout restart deployment/api -n rahbar`.

@@ -73,6 +73,9 @@ def main(argv: list[str] | None = None) -> int:
                         default=float(os.environ.get("COVERAGE_THRESHOLD", 0.65)))
     parser.add_argument("--min-share", type=float,
                         default=float(os.environ.get("COVERAGE_MIN_SHARE", 0.85)))
+    parser.add_argument("--without-category", action="append", default=[],
+                        help="leave these golden categories out, e.g. coverage_gap for the "
+                             "set before E4 added its questions")
     parser.add_argument("--label", default="coverage")
     parser.add_argument("--out-dir", type=Path, default=HERE / "results")
     args = parser.parse_args(argv)
@@ -82,7 +85,8 @@ def main(argv: list[str] | None = None) -> int:
 
     settings = get_settings()
     embedder = OllamaEmbedder(settings)
-    live, golden = _lines(args.live), _lines(args.golden)
+    live = _lines(args.live)
+    golden = [q for q in _lines(args.golden) if q.get("category") not in args.without_category]
     live_vectors = [embedder.embed(q["query"]) for q in live]
     golden_vectors = [embedder.embed(q["question"]) for q in golden]
     result = report(live, golden, nearest(live_vectors, golden_vectors),

@@ -1,0 +1,100 @@
+# The Part B suite plus the release gate, as one Job (RAGOps B, C2, F2, F3):
+#
+#   kubectl apply -f k8s/eval-job.yaml        # -> Complete (gate pass) or Failed (gate fail)
+#   kubectl logs -n rahbar job/ragops-eval    # the summary table, then the gate's verdict
+#   kubectl delete job ragops-eval -n rahbar  # Jobs are immutable: delete before the next run
+#
+# It runs eval/suite.py against http://api-candidate:8000 and writes
+# /results/eval/<UTC stamp>-<LABEL>.json on the ragops-results volume. Then scripts/gate.py
+# compares that file with the newest /results/eval/*-<BASELINE>.json, using the thresholds
+# from the ragops-gate ConfigMap mounted at /config. The gate decides: a failed gate fails
+# the Job, and backoffLimit 0 stops a retry from turning "rejected" into "crashed".
+#
+# The four values under "the candidate" must match the candidate that
+# `kubectl apply -k k8s/release/<name>` deployed, because the suite's module and component
+# levels read Chroma and Ollama directly with them:
+#
+#   release    LABEL              CHROMA_COLLECTION  EMBED_MODEL       TOP_K
+#   baseline   baseline-cluster   rahbar             nomic-embed-text  5     (RUNS 2: Part B stochasticity)
+#   k6         k6-cluster         rahbar-k6          nomic-embed-text  6     -> gate passes
+#   minilm     minilm-cluster     rahbar-minilm      all-minilm        5     -> gate fails, never rolled out
+#
+# Not part of kustomization.yaml: it is run on demand, like k8s/gate-job.yaml.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ragops-eval
+  namespace: rahbar
+  labels: {app: ragops-eval}
+spec:
+  backoffLimit: 0                      # a failed gate is an answer, not a crash: never retry it
+  activeDeadlineSeconds: 3600          # 44 questions take about 8 min a run on the laptops
+  template:
+    metadata:
+      labels: {app: ragops-eval}       # the ragops-eval NetworkPolicy: api, api-candidate, chroma, Ollama
+    spec:
+      restartPolicy: Never             # a failed attempt keeps its logs
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: eval
+          image: rahbar-eval:dev
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - >-
+              mkdir -p /results/eval /results/gate &&
+              python eval/suite.py --api "$API" --collection "$CHROMA_COLLECTION"
+              --label "$LABEL" --runs "$RUNS" --out-dir /results/eval &&
+              base=$(ls -t /results/eval/*-"$BASELINE".json | head -n 1) &&
+              cand=$(ls -t /results/eval/*-"$LABEL".json | head -n 1) &&
+              echo "gate: $cand against $base" &&
+              python scripts/gate.py "$base" "$cand"
+              --out "/results/gate/$(date -u +%Y%m%dT%H%M%SZ)-$LABEL-vs-$BASELINE.json"
+          envFrom:
+            - configMapRef: {name: rahbar-config}    # CHROMA_HOST, OLLAMA_URL, RELEVANCE_FLOOR, ...
+            - configMapRef: {name: ragops-gate}      # GATE_CONFIG=/config/gate.yaml
+          env:                                       # env wins over envFrom
+            # the candidate (see the table above)
+            - {name: LABEL, value: k6-cluster}
+            - {name: CHROMA_COLLECTION, value: rahbar-k6}
+            - {name: EMBED_MODEL, value: nomic-embed-text}
+            - {name: TOP_K, value: "6"}
+            # the run
+            - {name: RUNS, value: "1"}
+            - {name: BASELINE, value: baseline-cluster}
+            - {name: API, value: "http://api-candidate:8000"}
+            - {name: EMBED_TIMEOUT_SECONDS, value: "60"}   # the first embedding after a model load
+          volumeMounts:
+            - {name: gate-config, mountPath: /config, readOnly: true}
+            - {name: results, mountPath: /results}
+            - {name: tmp, mountPath: /tmp}
+          resources:                  # measured: suite peak 91m CPU, 93Mi (eval/results/f5/resources.md)
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: gate-config
+          configMap:
+            name: ragops-gate
+            items:
+              - {key: gate.yaml, path: gate.yaml}
+        - name: results
+          persistentVolumeClaim: {claimName: ragops-results}
+        - name: tmp
+          emptyDir: {}

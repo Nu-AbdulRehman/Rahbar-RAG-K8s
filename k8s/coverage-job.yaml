@@ -1,0 +1,72 @@
+# The Part E coverage check, as a Job (RAGOps E2, E4): the nearest golden question for each
+# of the 41 live queries, with COVERAGE_THRESHOLD and COVERAGE_MIN_SHARE from the ragops-gate
+# ConfigMap. It exits 1 below the minimum share, so the Job fails.
+#
+#   kubectl apply -f k8s/coverage-job.yaml          # after E4: Complete (88 % locally)
+#   kubectl logs -n rahbar job/ragops-coverage
+#   kubectl delete job ragops-coverage -n rahbar     # before the next run
+#
+# Before E4 (the E screenshot's first half): set WITHOUT_CATEGORY to coverage_gap, which
+# leaves out the golden questions E4 added from the uncovered topics, and LABEL to
+# coverage-before-cluster. The Job then fails below 85 %.
+# Not part of kustomization.yaml: it is run on demand.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ragops-coverage
+  namespace: rahbar
+  labels: {app: ragops-eval}
+spec:
+  backoffLimit: 0                      # below the threshold is an answer, not a crash
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels: {app: ragops-eval}       # same NetworkPolicy as the eval Job: it only needs Ollama
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: coverage
+          image: rahbar-eval:dev
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - >-
+              mkdir -p /results/coverage &&
+              python eval/query_coverage.py --label "$LABEL" --out-dir /results/coverage
+              ${WITHOUT_CATEGORY:+--without-category "$WITHOUT_CATEGORY"}
+          envFrom:
+            - configMapRef: {name: rahbar-config}    # OLLAMA_URL, EMBED_MODEL
+            - configMapRef: {name: ragops-gate}      # COVERAGE_THRESHOLD, COVERAGE_MIN_SHARE
+          env:
+            - {name: LABEL, value: coverage-after-cluster}
+            - {name: WITHOUT_CATEGORY, value: ""}     # coverage_gap for the "before" run
+            - {name: EMBED_TIMEOUT_SECONDS, value: "60"}
+          volumeMounts:
+            - {name: results, mountPath: /results}
+            - {name: tmp, mountPath: /tmp}
+          resources:                  # the suite's measured shape (eval/results/f5/resources.md); coverage embeds 85 texts
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: results
+          persistentVolumeClaim: {claimName: ragops-results}
+        - name: tmp
+          emptyDir: {}
