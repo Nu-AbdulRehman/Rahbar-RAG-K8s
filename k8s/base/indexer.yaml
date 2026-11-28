@@ -1,8 +1,13 @@
 # The only writer to Chroma (§4.2, ADR 0001). The Job indexes once; the CronJob re-indexes
 # weekly with the same image, command and arguments. Re-index without a redeploy:
 #   kubectl create job --from=cronjob/reindex manual-reindex-1 -n rahbar
-# The command downloads the corpus into an emptyDir, refuses to go on if any file's SHA-256
-# differs from the committed corpus/MANIFEST.md, then indexes (Q4, docs/PIPELINE.md).
+# The command downloads the corpus into the data lake's raw/ on the ragops-data PVC (RAGOps
+# F1, R4), refuses to go on if any file's SHA-256 differs from the committed
+# corpus/MANIFEST.md, then runs the pipeline: intake of incoming/ (a new batch), verify
+# (quality, completeness, recency, uniqueness; failures moved to quarantine/), archive
+# superseded versions, incremental sync to Chroma, cache invalidation (RAGOps A1, A2).
+# fetch.py only downloads what raw/ is missing, so an unchanged corpus costs no download
+# and embeds 0 chunks. Thresholds come from the ragops-gate ConfigMap (R6).
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -23,6 +28,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
+        fsGroup: 10001                 # the data lake PVC is writable by the non-root user
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: indexer
@@ -31,13 +37,14 @@ spec:
           command: ["sh", "-c"]
           args:
             - >-
-              python corpus/fetch.py --out /corpus &&
-              python corpus/fetch.py --verify --out /corpus &&
+              python corpus/fetch.py --out "$CORPUS_DIR" &&
+              python corpus/fetch.py --verify --out "$CORPUS_DIR" &&
               python -m pipeline.run
           envFrom:
             - configMapRef: {name: rahbar-config}
+            - configMapRef: {name: ragops-gate}     # VERIFY_* thresholds (R6)
           volumeMounts:
-            - {name: corpus, mountPath: /corpus}
+            - {name: data-lake, mountPath: /data}     # DATA_LAKE_DIR; CORPUS_DIR is its raw/
             - {name: tmp, mountPath: /tmp}
           resources:                  # peak 1659m, 1159Mi during OCR; the limit is 1.5x peak, so a bigger scan is not an exit 137 (docs/evidence/kubectl-top.txt)
             requests:
@@ -53,8 +60,8 @@ spec:
               drop:
                 - ALL
       volumes:
-        - name: corpus
-          emptyDir: {}
+        - name: data-lake
+          persistentVolumeClaim: {claimName: ragops-data}
         - name: tmp
           emptyDir: {}
 ---
@@ -84,6 +91,7 @@ spec:
             runAsNonRoot: true
             runAsUser: 10001
             runAsGroup: 10001
+            fsGroup: 10001
             seccompProfile: {type: RuntimeDefault}
           containers:
             - name: indexer
@@ -92,13 +100,14 @@ spec:
               command: ["sh", "-c"]
               args:
                 - >-
-                  python corpus/fetch.py --out /corpus &&
-                  python corpus/fetch.py --verify --out /corpus &&
+                  python corpus/fetch.py --out "$CORPUS_DIR" &&
+                  python corpus/fetch.py --verify --out "$CORPUS_DIR" &&
                   python -m pipeline.run
               envFrom:
                 - configMapRef: {name: rahbar-config}
+                - configMapRef: {name: ragops-gate}
               volumeMounts:
-                - {name: corpus, mountPath: /corpus}
+                - {name: data-lake, mountPath: /data}     # DATA_LAKE_DIR; CORPUS_DIR is its raw/
                 - {name: tmp, mountPath: /tmp}
               resources:                  # peak 1659m, 1159Mi during OCR; the limit is 1.5x peak, so a bigger scan is not an exit 137 (docs/evidence/kubectl-top.txt)
                 requests:
@@ -114,7 +123,7 @@ spec:
                   drop:
                     - ALL
           volumes:
-            - name: corpus
-              emptyDir: {}
+            - name: data-lake
+              persistentVolumeClaim: {claimName: ragops-data}
             - name: tmp
               emptyDir: {}

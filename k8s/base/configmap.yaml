@@ -28,4 +28,7 @@ data:
   LLM_TIMEOUT_SECONDS: "60"            # per call; REQUEST_BUDGET_SECONDS bounds the whole request
   REQUEST_BUDGET_SECONDS: "50"         # below nginx-ingress's 60 s proxy-read-timeout, so no 504 reaches users
   LOG_LEVEL: "INFO"                    # prompts and history are DEBUG only (ADR 0004); keep INFO
-  CORPUS_DIR: "/corpus"                # the indexer's emptyDir, filled by corpus/fetch.py (Q4)
+  DATA_LAKE_DIR: "/data"               # RAGOps: the ragops-data PVC in the ingestion Job (R4)
+  CORPUS_DIR: "/data/raw"              # the lake's raw/, filled by corpus/fetch.py (Q4) and by intake of incoming/
+  TRACE_DIR: "/results/traces"         # RAGOps D1/F4: the api's trace volume (ragops-results PVC); stdout gets the record too
+  GUARDRAIL_INJECTION_ACTION: "flag"   # RAGOps D4: flag | redact a chunk with instruction-like text (ADR 0005)

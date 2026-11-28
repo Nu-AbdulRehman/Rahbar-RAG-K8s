@@ -5,6 +5,7 @@ namespace: rahbar
 # Secret created by `make secret` (§4.7).
 resources:
   - namespace.yaml
+  - ragops-storage.yaml
   - serviceaccounts.yaml
   - configmap.yaml
   - chroma.yaml

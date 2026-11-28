@@ -23,6 +23,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
+        fsGroup: 10001                 # the trace volume is writable by the non-root user
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: api
@@ -54,6 +55,7 @@ spec:
               sleep: {seconds: 5}        # leave the Service endpoints before connections stop (§4.6)
           volumeMounts:
             - {name: tmp, mountPath: /tmp}
+            - {name: results, mountPath: /results}   # traces-<date>-<pod>.jsonl (RAGOps D1, F4)
           resources:                  # peak 186m at start-up, 6m in a 40-question burst; 129Mi (docs/evidence/kubectl-top.txt)
             requests:
               cpu: 100m
@@ -70,6 +72,8 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: results
+          persistentVolumeClaim: {claimName: ragops-results}
 ---
 apiVersion: v1
 kind: Service
