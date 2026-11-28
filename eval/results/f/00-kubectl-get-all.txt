@@ -1,0 +1,86 @@
+$ kubectl get all,pvc,configmap,cronjob,job -n rahbar
+NAME                                 READY   STATUS      RESTARTS      AGE
+pod/api-67b7d66d9d-h42fx             1/1     Running     0             5m5s
+pod/api-67b7d66d9d-l9mw7             1/1     Running     0             5m11s
+pod/api-67b7d66d9d-m84tn             1/1     Running     0             5m8s
+pod/api-candidate-764676fc9d-8p8gj   1/1     Running     0             5m56s
+pod/chroma-0                         1/1     Running     0             1s
+pod/index-rahbar-k6-6jxjq            0/1     Completed   0             26m
+pod/index-rahbar-minilm-ctrfk        0/1     Completed   0             28m
+pod/index-rahbar-mqjs8               0/1     Completed   0             20m
+pod/indexer-646d2                    0/1     Completed   0             36m
+pod/ingest-batch-b-tcjs9             0/1     Completed   1 (11m ago)   14m
+pod/ragops-gate-nt7dj                0/1     Completed   0             15m
+pod/ragops-shell                     1/1     Running     0             16m
+pod/redis-6ff6f96dc4-fph4q           1/1     Running     0             36m
+pod/reindex-unchanged-lg48s          0/1     Completed   0             30m
+pod/suite-baseline-cluster-rbqr5     0/1     Completed   0             18m
+pod/suite-k6-cluster-tgc7t           0/1     Completed   0             22m
+pod/suite-minilm-cluster-c9mrn       0/1     Completed   0             21m
+pod/ui-56df4cc69d-v4p28              1/1     Running     0             36m
+
+NAME                    TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/api             ClusterIP   10.104.172.1     <none>        8000/TCP   36m
+service/api-candidate   ClusterIP   10.101.129.107   <none>        8000/TCP   28m
+service/chroma          ClusterIP   10.111.105.94    <none>        8000/TCP   36m
+service/redis           ClusterIP   10.97.119.44     <none>        6379/TCP   36m
+service/ui              ClusterIP   10.96.235.155    <none>        8080/TCP   36m
+
+NAME                            READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/api             3/3     3            3           36m
+deployment.apps/api-candidate   1/1     1            1           28m
+deployment.apps/redis           1/1     1            1           36m
+deployment.apps/ui              1/1     1            1           36m
+
+NAME                                       DESIRED   CURRENT   READY   AGE
+replicaset.apps/api-5589b7cd85             0         0         0       7m13s
+replicaset.apps/api-55bb84d464             0         0         0       6m6s
+replicaset.apps/api-67b7d66d9d             3         3         3       5m33s
+replicaset.apps/api-6f7744d7f8             0         0         0       9m40s
+replicaset.apps/api-765c6f6d4              0         0         0       5m21s
+replicaset.apps/api-79f86f6455             0         0         0       8m7s
+replicaset.apps/api-859448c677             0         0         0       36m
+replicaset.apps/api-candidate-64c75d7b6f   0         0         0       20m
+replicaset.apps/api-candidate-6565cb4855   0         0         0       23m
+replicaset.apps/api-candidate-6f9d976c5    0         0         0       21m
+replicaset.apps/api-candidate-764676fc9d   1         1         1       5m56s
+replicaset.apps/api-candidate-7ddfb98d4    0         0         0       26m
+replicaset.apps/api-candidate-9f898bc9b    0         0         0       28m
+replicaset.apps/api-fcdfb567b              0         0         0       23m
+replicaset.apps/redis-6ff6f96dc4           1         1         1       36m
+replicaset.apps/ui-56df4cc69d              1         1         1       36m
+
+NAME                      READY   AGE
+statefulset.apps/chroma   1/1     36m
+
+NAME                                      REFERENCE        TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/api   Deployment/api   cpu: 2%/70%   3         8         3          36m
+
+NAME                    SCHEDULE    TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+cronjob.batch/reindex   0 3 * * 0   <none>     False     0        <none>          36m
+
+NAME                               STATUS     COMPLETIONS   DURATION   AGE
+job.batch/index-rahbar             Complete   1/1           76s        20m
+job.batch/index-rahbar-k6          Complete   1/1           88s        26m
+job.batch/index-rahbar-minilm      Complete   1/1           81s        28m
+job.batch/indexer                  Complete   1/1           4m53s      36m
+job.batch/ingest-batch-b           Complete   1/1           4m38s      14m
+job.batch/ragops-gate              Complete   1/1           3s         15m
+job.batch/reindex-unchanged        Complete   1/1           115s       30m
+job.batch/suite-baseline-cluster   Complete   1/1           2m28s      18m
+job.batch/suite-k6-cluster         Complete   1/1           88s        22m
+job.batch/suite-minilm-cluster     Complete   1/1           52s        21m
+
+NAME                                   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-chroma-0    Bound    pvc-ad634884-79cb-4016-9c84-be4691c96cd5   2Gi        RWO            standard       <unset>                 36m
+persistentvolumeclaim/ragops-data      Bound    pvc-7438637b-e8b9-4712-8713-919a71deee51   2Gi        RWO            standard       <unset>                 36m
+persistentvolumeclaim/ragops-results   Bound    pvc-5430c414-9881-400c-94f8-3b32570329d2   1Gi        RWO            standard       <unset>                 36m
+persistentvolumeclaim/redis-data       Bound    pvc-be35c3ff-d477-4753-86ff-8c620ef79a6f   1Gi        RWO            standard       <unset>                 36m
+
+NAME                                    DATA   AGE
+configmap/candidate-config-2fd2dg6gkd   3      28m
+configmap/candidate-config-cc79hkcbg4   2      20m
+configmap/candidate-config-ddkbk2b9fd   3      26m
+configmap/kube-root-ca.crt              1      36m
+configmap/ragops-gate                   8      36m
+configmap/rahbar-config                 25     36m
