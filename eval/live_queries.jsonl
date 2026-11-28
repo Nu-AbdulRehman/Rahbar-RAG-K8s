@@ -1,0 +1,41 @@
+{"id": "l01", "query": "my cgpa is 1.9 am i on probation now", "topic": "academic standing", "in_domain": true}
+{"id": "l02", "query": "what gpa do i need so i'm not on academic warning", "topic": "academic standing", "in_domain": true}
+{"id": "l03", "query": "how many classes can i miss before i get F in a course", "topic": "attendance", "in_domain": true}
+{"id": "l04", "query": "is 75% attendance enough to sit the final", "topic": "attendance", "in_domain": true}
+{"id": "l05", "query": "what does clause 1.21 say about attendance", "topic": "attendance", "in_domain": true}
+{"id": "l06", "query": "how much is one credit hour for a bachelors student", "topic": "fees", "in_domain": true}
+{"id": "l07", "query": "fee per credit hour BS 2026", "topic": "fees", "in_domain": true}
+{"id": "l08", "query": "how much do i pay to get my paper rechecked", "topic": "fees", "in_domain": true}
+{"id": "l09", "query": "if i drop a course after registering do i get my money back", "topic": "fees", "in_domain": true}
+{"id": "l10", "query": "refund policy when withdrawing from a course", "topic": "fees", "in_domain": true}
+{"id": "l11", "query": "can i take a semester off and come back later", "topic": "semester freeze", "in_domain": true}
+{"id": "l12", "query": "how many semesters can i freeze in total", "topic": "semester freeze", "in_domain": true}
+{"id": "l13", "query": "what is the fee for freezing a semester", "topic": "semester freeze", "in_domain": true}
+{"id": "l14", "query": "how long does the summer semester last", "topic": "summer semester", "in_domain": true}
+{"id": "l15", "query": "how many weeks of teaching in a normal semester", "topic": "summer semester", "in_domain": true}
+{"id": "l16", "query": "i missed my final because i was sick can i retake it", "topic": "retake exams", "in_domain": true}
+{"id": "l17", "query": "how many grade points is B+", "topic": "grading", "in_domain": true}
+{"id": "l18", "query": "what grade points does an A- carry", "topic": "grading", "in_domain": true}
+{"id": "l19", "query": "am i allowed to use chatgpt for my lit review", "topic": "generative ai", "in_domain": true}
+{"id": "l20", "query": "what are the rules about using AI tools in assignments", "topic": "generative ai", "in_domain": true}
+{"id": "l21", "query": "how do i transfer to the lahore campus", "topic": "campus transfer", "in_domain": true}
+{"id": "l22", "query": "can i register for a course without passing its prereq", "topic": "course registration", "in_domain": true}
+{"id": "l23", "query": "if i repeat a course is my grade capped", "topic": "course repeat", "in_domain": true}
+{"id": "l24", "query": "minimum cgpa required to graduate", "topic": "graduation", "in_domain": true}
+{"id": "l25", "query": "what did the 2023 rules say about the length of a semester", "topic": "older rules", "in_domain": true}
+{"id": "l26", "query": "what happens if i stay on probation for two semesters", "topic": "academic standing", "in_domain": true}
+{"id": "l27", "query": "tuition fee for MS per credit hour", "topic": "fees", "in_domain": true}
+{"id": "l28", "query": "do medical leaves count towards attendance", "topic": "attendance", "in_domain": true}
+{"id": "l29", "query": "how many books can i borrow from the library", "topic": "library", "in_domain": false}
+{"id": "l30", "query": "what is the fine for returning a library book late", "topic": "library", "in_domain": false}
+{"id": "l31", "query": "can i book a group study room in the library", "topic": "library", "in_domain": false}
+{"id": "l32", "query": "what time does the university bus leave in the evening", "topic": "transport", "in_domain": false}
+{"id": "l33", "query": "how do i register for the university bus service", "topic": "transport", "in_domain": false}
+{"id": "l34", "query": "when are the cricket team trials", "topic": "sports", "in_domain": false}
+{"id": "l35", "query": "what are the gym timings on campus", "topic": "sports", "in_domain": false}
+{"id": "l36", "query": "is there a counsellor i can talk to about exam stress", "topic": "counselling", "in_domain": false}
+{"id": "l37", "query": "how do i book an appointment with the student counsellor", "topic": "counselling", "in_domain": false}
+{"id": "l38", "query": "can i take my phone into the exam hall", "topic": "exam conduct", "in_domain": false}
+{"id": "l39", "query": "how late can i arrive for an exam and still sit it", "topic": "exam conduct", "in_domain": false}
+{"id": "l40", "query": "how do i get my university email account", "topic": "it accounts", "in_domain": false}
+{"id": "l41", "query": "what are the cafeteria opening hours", "topic": "cafeteria", "in_domain": false}
