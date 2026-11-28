@@ -168,9 +168,11 @@ so there is a revision to undo, and the indexer's ConfigMap stays untouched.
 kubectl set env deployment/api -n rahbar EMBED_MODEL=all-minilm CHROMA_COLLECTION=rahbar-minilm
 kubectl annotate deployment/api -n rahbar kubernetes.io/change-cause="bad release: all-minilm" --overwrite
 kubectl rollout status deployment/api -n rahbar
+sleep 10   # ingress-nginx keeps the old pods in its endpoints for a few seconds
 # ask one question: its trace shows collection rahbar-minilm, embedding all-minilm
 kubectl rollout undo deployment/api -n rahbar
-kubectl rollout status deployment/api -n rahbar
+sleep 3; kubectl rollout status deployment/api -n rahbar   # without the pause it can report done before the undo starts
+sleep 10
 kubectl rollout history deployment/api -n rahbar
 # ask again: the new trace shows rahbar-k6 and nomic-embed-text with its digest
 ```

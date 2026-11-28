@@ -76,3 +76,15 @@ Appended when something breaks, not afterwards. Feeds engineering note Q7.
   Job, so each attempt is its own pod and its logs stay with it until the Job is deleted.
   The pipeline's steps proved safe to repeat (moves are recorded in the catalog, the sync
   embeds only what changed).
+
+## 2026-11-28 · ragops/f-kubernetes · two races in the rollout screenshots (Member 2)
+- **Symptom:** taking the F3 screenshots, the trace asked right after `rollout undo` showed
+  all-minilm, and on the retake the trace right after the bad release showed rahbar-k6.
+- **Cause:** (1) `kubectl rollout status` run immediately after `rollout undo` printed
+  "successfully rolled out" without a single "Waiting" line: the Deployment controller had
+  not yet observed the new generation. (2) After a completed rollout, ingress-nginx kept
+  routing to the terminating pods for a few seconds (preStop sleep 5 plus its endpoint
+  sync).
+- **Fix:** `sleep 3` before `rollout status` after an undo, and `sleep 10` before asking
+  the question whose trace is the evidence (k8s/README.md section 4). No code change: the
+  rollout itself kept three ready pods throughout.

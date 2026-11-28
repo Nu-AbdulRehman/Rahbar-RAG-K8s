@@ -23,6 +23,16 @@ Ollama 0.40.19 on an AMD GPU) on 2026-11-28; evidence in `eval/results/f/`,
 | E on the cluster | query_coverage as a Job | not run: it needs your eval Job (same image) | |
 | G | report text for C2, D, F, Q4 c, e, f | drafted | docs/report/member2-sections.md |
 
+## Screenshots (Member 2's appendix items, taken)
+
+`docs/report/screenshots/` holds C2 (gate fail, gate pass), D1 (full trace record), D2
+(trace tool with MATCH), and F (get all; ingestion Job logs; an evaluation Job's logs;
+the gate Job before and after a ConfigMap edit; rollout status; bad release; rollout undo
+with the trace showing the previous collection and embedding version). Its README.md maps
+each file to its label and command; `transcripts/` has the text. Still to take, by you: A
+(the unchanged-corpus run with 0 embedded; the Batch B report is covered by
+F2-ingestion-job-logs), B, E, and the eval Job logs again once `k8s/eval-job.yaml` exists.
+
 ## The eval image (the decision you were waiting for)
 
 `eval/Dockerfile`, built **from the repository root**: `docker build -t rahbar-eval:dev -f

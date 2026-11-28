@@ -142,13 +142,8 @@ paper does not discuss, had to be keyed by configuration as well as by index ver
 | --- | --- |
 | Member 2 (MTH99910) | uniqueness check (A1 swap) and its measured threshold; trace record, trace tool, metrics, summary, retrieval rail (D1-D4); release gate, config and ConfigMap (C2); PVCs, Jobs, candidate release, NetworkPolicy, eval image, resources, k8s/README.md (F, C3); cluster runs of A, B, C and F; ADR 0005; four cluster failures found and fixed |
 
-## Screenshots Member 2 should take (appendix)
+## Screenshots (appendix)
 
-Each from the terminal on our own cluster, command and output uncropped. The committed
-text files show the same runs; re-run the command to screenshot it.
-
-- C: `python scripts/gate.py ...baseline-cluster.json ...minilm-cluster.json` (fail) and `...k6-cluster.json` (pass)
-- D: one full trace (`kubectl logs ... | grep <id>`) and `trace_show <id>` with MATCH
-- F: `kubectl get all,pvc,configmap,cronjob,job -n rahbar`; `kubectl logs job/indexer`; the
-  eval Job's logs; the gate Job Failed then Complete around the ConfigMap edit;
-  `kubectl rollout status` and `kubectl rollout undo` with the trace after it
+Taken: docs/report/screenshots/ (index in its README.md): C2 gate fail and pass, D1 full
+trace record, D2 trace tool, F get all, ingestion Job logs, evaluation Job logs, gate Job
+before and after a ConfigMap edit, rollout status, bad release, rollout undo with the trace.
