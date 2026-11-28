@@ -44,24 +44,29 @@ in the `ragops-gate` ConfigMap (R6).
 
 ## Measured, for C2 and F3
 
-| label | collection | recall@5 | faithfulness | p95 (s) | abstention | for |
+On the final 44-question golden set (eval/results/final-44-summary.md, 2026-11-28):
+
+| label | collection | recall@5 | faithfulness | p50 (s) | abstention | for |
 | --- | --- | --- | --- | --- | --- | --- |
-| baseline | rahbar (150/30, nomic) | 0.857 | 0.692 | 3.49 | 1.00 | the live api |
-| k6 | rahbar-k6 (top_k 6) | 0.857 | 0.692 | 4.49 | 1.00 | the passing candidate (R10b) |
-| minilm | rahbar-minilm (all-minilm) | 0.809 | 0.667 | 2.77 | 1.00 | the failing candidate and the bad release |
-| c200 | rahbar-c200 (200/40) | 0.786 | 0.750 | 6.85 | 1.00 | measured, fails recall |
+| baseline-44 | rahbar-base (150/30, nomic, pre-Batch-B) | 0.688 | 0.714 | 2.43 | 1.00 | the live api |
+| k6-44 | rahbar-k6 (top_k 6) | 0.688 | 0.733 | 2.44 | 1.00 | the passing candidate (R10b) |
+| minilm-44 | rahbar-minilm (all-minilm) | 0.594 | 0.750 | 0.06 | 1.00 | the failing candidate and the bad release |
+| c200-44 | rahbar-c200 (200/40) | 0.641 | 0.733 | 2.38 | 1.00 | measured, fails recall |
+| o40-44 | rahbar-o40 (150/40) | 0.625 | 0.812 | 2.24 | 1.00 | measured, fails recall |
 
 The api reads `CHROMA_COLLECTION`, `EMBED_MODEL` and `TOP_K`, so each candidate Deployment
-is the same image with those three values changed. The baseline run on 2026-11-28 is
-`eval/results/20261128T063735Z-baseline.json`. All numbers were measured locally (Chroma in
-Docker, Ollama on the host GPU); re-run them as Jobs on the cluster for the report.
+is the same image with those three values changed. Gate on the median latency or on cluster
+numbers: local p95 swings from 3 s to 32 s on the same code (Ollama prompt-cache stalls, see
+the summary). all-minilm's low latency is declines, because its similarities fall under the
+nomic-calibrated relevance floor. All numbers were measured locally (Chroma in Docker, Ollama
+on the host GPU); re-run them as Jobs on the cluster for the report.
 
-## Left for the members (not something an AI can do for you)
+## Done by the members
 
-- At least 8 golden questions **written by hand** (4 each). Every question in
-  eval/golden.jsonl today is labelled `synthetic`, because an AI wrote it.
-- At least 8 synthetic questions **reviewed by hand**: set `reviewed_by` on them.
-- The 8 faithfulness **hand labels**: fill `human_supported` and `labelled_by` in
-  `eval/results/20261128T063735Z-baseline-faithfulness-sample.jsonl`, then run
-  `python eval/suite.py agreement <that file>`.
+- 8 golden questions written by hand (q37-q44, 4 each), 8 synthetic ones reviewed by both.
+- 8 faithfulness hand labels: judge agreement 6 of 8 (eval/results/faithfulness-agreement.txt).
+
+## Still waiting on Member 2
+
+- The uniqueness check, C2/C3, D and F.
 - D5's root cause needs your trace record first.
