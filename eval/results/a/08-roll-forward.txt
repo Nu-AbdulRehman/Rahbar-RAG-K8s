@@ -1,0 +1,11 @@
+$ python -m pipeline.ops restore fee-structure-page 2027-28   (roll forward again)
+restored fee-structure-page 2027-28 (b08-fee-structure-2027.md) as current
+archived fee-structure-page 2026-27 (fee-structure-page.html)
+run the ingestion Job to apply it to the index (metadata only, no re-embedding)
+$ python -m pipeline.run
+fee-structure-page.html                      pass         pass         fail         not run      archive
+b08-fee-structure-2027.md                    pass         pass         pass         not run      index
+{"ts": "2026-11-28T07:34:44Z", "logger": "rahbar.indexer", "msg": "store", "collection": "rahbar", "embedded": 0, "metadata_updated": 13, "unchanged": 821, "deleted": 0, "total": 834, "rebuilt": false
+$ python -m pipeline.ops status
+  archive    fee-structure-page                       2026-27    superseded fee-structure-page.html
+  raw        fee-structure-page                       2027-28    current    b08-fee-structure-2027.md

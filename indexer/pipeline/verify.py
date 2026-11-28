@@ -95,6 +95,8 @@ def completeness(entry: Entry, path: Path, doc: Document | None) -> Check:
 
 
 def recency(entry: Entry, lake_entries: list[Entry]) -> Check:
+    """Fails when a newer version of the same doc_id is among `lake_entries`, which the
+    run passes as the current (raw/) versions only, so a rollback holds."""
     newer = [e for e in lake_entries
              if e.doc_id == entry.doc_id and e.file != entry.file
              and version_key(e.doc_version) > version_key(entry.doc_version)]

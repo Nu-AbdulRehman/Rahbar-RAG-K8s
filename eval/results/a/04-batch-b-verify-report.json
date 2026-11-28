@@ -1,0 +1,614 @@
+{
+  "run": "20261128T072139Z",
+  "documents": [
+    {
+      "file": "undergraduate-academic-rules-aug-2023.pdf",
+      "doc_id": "academic-rules",
+      "version": "2023-08",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "5089 words, 10% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2023-08, 26 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "fail",
+          "reason": "newer version 2026-06 of 'academic-rules' exists (academic-rules-handbook-jun-2026.pdf)"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "archive",
+      "file_move": "already archived"
+    },
+    {
+      "file": "academic-rules-handbook-jun-2026.pdf",
+      "doc_id": "academic-rules",
+      "version": "2026-06",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "9896 words, 9% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-06, 58 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'academic-rules'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "prospectus-2026-academic-rules-and-regulations.pdf",
+      "doc_id": "prospectus-2026-academic-rules-and-regulations",
+      "version": "2026",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "3503 words, 10% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026, 5 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'prospectus-2026-academic-rules-and-regulations'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "student-handbook-jun-2026.pdf",
+      "doc_id": "student-handbook-jun-2026",
+      "version": "2026-06",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "11300 words, 8% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-06, 64 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'student-handbook-jun-2026'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "annual-report-2019-20.pdf",
+      "doc_id": "annual-report-2019-20",
+      "version": "2019-20",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "7291 words, 8% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2019-20, 33 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'annual-report-2019-20'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "annual-report-2023-24.pdf",
+      "doc_id": "annual-report-2023-24",
+      "version": "2023-24",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "29553 words, 8% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2023-24, 85 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'annual-report-2023-24'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "fee-structure-page.html",
+      "doc_id": "fee-structure-page",
+      "version": "2026-27",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "629 words, 12% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-27, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "fail",
+          "reason": "newer version 2027-28 of 'fee-structure-page' exists (b08-fee-structure-2027.md)"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "archive",
+      "file_move": "moved"
+    },
+    {
+      "file": "grading-page.html",
+      "doc_id": "grading-page",
+      "version": "2026",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "922 words, 10% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'grading-page'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "faculty-entrepreneurship-and-technical-start-ups-policy.pdf",
+      "doc_id": "faculty-entrepreneurship-and-technical-start-ups-policy",
+      "version": "2022-05",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "1847 words, 9% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2022-05, 8 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'faculty-entrepreneurship-and-technical-start-ups-policy'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b01-library-rules.md",
+      "doc_id": "library-rules",
+      "version": "2026-09",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "157 words, 10% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-09, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'library-rules'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b02-library-rules-copy.md",
+      "doc_id": "library-rules",
+      "version": "2026-09",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "157 words, 10% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-09, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'library-rules'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b03-exam-conduct.md",
+      "doc_id": "exam-conduct",
+      "version": "2026-09",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "164 words, 7% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-09, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'exam-conduct'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b04-exam-conduct-copy.md",
+      "doc_id": "exam-conduct",
+      "version": "2026-09",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "164 words, 7% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-09, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'exam-conduct'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b05-exam-conduct-revised-wording.md",
+      "doc_id": "exam-conduct-notice",
+      "version": "2026-09",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "166 words, 7% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-09, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'exam-conduct-notice'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b06-scholarship-policy-truncated.pdf",
+      "doc_id": "b06-scholarship-policy-truncated",
+      "version": "",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "fail",
+          "reason": "extraction failed: PdfminerException: Unexpected EOF"
+        },
+        {
+          "check": "completeness",
+          "result": "fail",
+          "reason": "missing metadata: title, date or version; PDF has no %%EOF marker: the file is cut short"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'b06-scholarship-policy-truncated'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "quarantine",
+      "file_move": "moved"
+    },
+    {
+      "file": "b07-transport-notice.md",
+      "doc_id": "transport-notice",
+      "version": "",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "60 words, 12% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "fail",
+          "reason": "missing metadata: date or version"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'transport-notice'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "quarantine",
+      "file_move": "moved"
+    },
+    {
+      "file": "b08-fee-structure-2027.md",
+      "doc_id": "fee-structure-page",
+      "version": "2027-28",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "126 words, 19% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2027-28, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'fee-structure-page'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b09-it-acceptable-use.md",
+      "doc_id": "it-acceptable-use",
+      "version": "2026-09",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "140 words, 5% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-09, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'it-acceptable-use'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b10-sports-facilities.md",
+      "doc_id": "sports-facilities",
+      "version": "2026-09",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "113 words, 8% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-09, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'sports-facilities'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    },
+    {
+      "file": "b11-scanned-notice-ocr.txt",
+      "doc_id": "b11-scanned-notice-ocr",
+      "version": "",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "fail",
+          "reason": "100% of the text is not readable words (maximum 30%)"
+        },
+        {
+          "check": "completeness",
+          "result": "fail",
+          "reason": "missing metadata: title, date or version"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'b11-scanned-notice-ocr'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "quarantine",
+      "file_move": "moved"
+    },
+    {
+      "file": "b12-student-counselling.md",
+      "doc_id": "student-counselling",
+      "version": "2026-09",
+      "checks": [
+        {
+          "check": "quality",
+          "result": "pass",
+          "reason": "106 words, 8% unreadable"
+        },
+        {
+          "check": "completeness",
+          "result": "pass",
+          "reason": "source, title, version 2026-09, 1 page(s), not truncated"
+        },
+        {
+          "check": "recency",
+          "result": "pass",
+          "reason": "latest version of 'student-counselling'"
+        },
+        {
+          "check": "uniqueness",
+          "result": "not run",
+          "reason": "not run yet: exact and near-duplicate detection is Member 2's swap task (docs/planning/ragops-implementation-plan.md)"
+        }
+      ],
+      "action": "index",
+      "file_move": null
+    }
+  ]
+}

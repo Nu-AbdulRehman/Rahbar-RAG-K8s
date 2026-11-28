@@ -1,0 +1,17 @@
+$ python -m pipeline.ops status   (before)
+  archive    fee-structure-page                       2026-27    superseded fee-structure-page.html
+  raw        fee-structure-page                       2027-28    current    b08-fee-structure-2027.md
+$ python -m pipeline.ops restore fee-structure-page 2026-27
+restored fee-structure-page 2026-27 (fee-structure-page.html) as current
+archived fee-structure-page 2027-28 (b08-fee-structure-2027.md)
+run the ingestion Job to apply it to the index (metadata only, no re-embedding)
+$ python -m pipeline.ops status   (after)
+  archive    fee-structure-page                       2027-28    superseded b08-fee-structure-2027.md
+  raw        fee-structure-page                       2026-27    current    fee-structure-page.html
+$ python -m pipeline.run
+{"ts": "2026-11-28T07:29:07Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "b08-fee-structure-2027.md", "chunks": 3, "action": "index", "ocr_pages": 0}
+{"ts": "2026-11-28T07:29:41Z", "logger": "rahbar.indexer", "msg": "chunked", "source": "fee-structure-page.html", "chunks": 10, "action": "archive", "ocr_pages": 0}
+b08-fee-structure-2027.md                    pass         pass         pass         not run      index
+fee-structure-page.html                      pass         pass         fail         not run      archive
+    recency: newer version 2027-28 of 'fee-structure-page' exists (b08-fee-structure-2027.md)
+{"ts": "2026-11-28T07:29:55Z", "logger": "rahbar.indexer", "msg": "store", "collection": "rahbar", "embedded": 0, "metadata_updated": 3, "unchanged": 831, "deleted": 0, "total": 834, "rebuilt": false}

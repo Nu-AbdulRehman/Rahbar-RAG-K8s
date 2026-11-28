@@ -44,3 +44,4 @@ The resolution log. A decision the brief does not dictate gets a row here. Never
 | R11 | The faithfulness judge is llama3.2:3b on host Ollama | Resolved (A03 plan) | agreement measured against 8 hand-labelled answers |
 | R12 | Namespace stays `rahbar` | Resolved (A03 plan) | A02 objects carry over; new objects added to k8s/base |
 | R13 | Batch B is crafted from our own copies of corpus documents plus files we write | Resolved (A03 plan) | planted problems are controlled; files committed under corpus/batch_b/ |
+| R10b | Part C passing candidate is top_k 6 (collection rahbar-k6, same 150/30 nomic-embed-text index); all-minilm stays the failing candidate and the bad release | Resolved (measured, user decision 2026-11-28) | Replaces R10's 200/40: every chunking change measured (200/40, 150/40) lost more than 2 points of recall@5 (0.786 vs 0.857), so it could not pass the gate honestly |
