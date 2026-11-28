@@ -161,6 +161,11 @@
 - **Shaped / Wrote:** Dev 2 close-out list: raise the indexer Job and CronJob backoffLimit so a fresh cluster's start-up race cannot fail the first index (§4.2); run the README apply order from a clean clone on a new minikube (§7, -5); write engineering note Q7 from docs/failure-log.md (§7); reword the rules files so no literal starter marker remains (§0 of the checker); hand the owner-only steps (branch protection, Docker Hub secrets) to the user (§6).
 - **I changed:** accepted as-is.
 
+## 2026-11-28 · ragops/a-data-management
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** Part A task list (Member 1): record decisions R1-R13 (plan); add doc_id and title to the corpus catalog (A1 completeness, recency); run a verification stage between extract and chunk with quality, completeness and recency checks (A1); move failed documents to quarantine with a reason and write a report per run (A1); hash chunks and embed only new or changed ones, update metadata without re-embedding, delete orphans (A2); archive superseded versions and restore one on command (A2); count chunks per document (A2); build Batch B with the planted problems (A2); test every check and rule (A1, A2).
+- **I changed:** left the uniqueness check (exact and near duplicates) as a named, not-yet-run slot in the verification report: it is Member 2's swap task in the plan.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
