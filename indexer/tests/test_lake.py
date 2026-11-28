@@ -87,3 +87,19 @@ def test_a_read_only_source_is_copied_not_lost(tmp_path: Path, monkeypatch) -> N
     assert lake.archive(lake.current()[0]) == "copied (source is read-only)"
     assert (lake.raw / "fixture.md").exists()
     assert (lake.archive_dir / "f" / "1" / "fixture.md").exists()
+
+
+def test_a_batch_beside_a_fetch_index_is_still_catalogued(tmp_path: Path) -> None:
+    """raw/ holds fetch.py's _index.json; a batch moved in by intake() is not in it, and
+    must still be read from its front matter (the first Batch B run indexed none of it)."""
+    lake = _lake(tmp_path)
+    lake.raw.mkdir(parents=True)
+    (lake.raw / "fees.html").write_text("<html></html>", encoding="utf-8")
+    (lake.raw / "_index.json").write_text(json.dumps(
+        [{"file": "fees.html", "doc_id": "fees", "title": "Fees", "doc_version": "2026"}]),
+        encoding="utf-8")
+    (lake.raw / "MANIFEST.md").write_text("| file | sha256 |", encoding="utf-8")  # fetch.py's
+    _md(lake.incoming, "library.md", "library", "2026")
+    lake.intake()
+    lake.refresh()
+    assert sorted(e.file for e in lake.current()) == ["fees.html", "library.md"]

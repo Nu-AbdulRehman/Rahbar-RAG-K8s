@@ -94,11 +94,14 @@ def read_folder(folder: Path) -> list[Entry]:
     (fetch.py), otherwise each Markdown file's front matter. Missing fields stay empty,
     for the completeness check to report."""
     index = folder / INDEX
-    if index.exists():
-        return [_entry(r) for r in json.loads(index.read_text(encoding="utf-8"))]
-    entries = []
+    entries = [_entry(r) for r in json.loads(index.read_text(encoding="utf-8"))] \
+        if index.exists() else []
+    listed = {e.file for e in entries}
+    # Documents the index does not list (a batch moved in by intake()) still count, from
+    # their front matter: found on the first Batch B run, which indexed none of them.
     for path in sorted(folder.glob("*")) if folder.is_dir() else []:
-        if path.suffix.lower() not in DOC_SUFFIXES or path.name.lower().startswith("readme"):
+        if path.suffix.lower() not in DOC_SUFFIXES or path.name in listed \
+                or path.name.lower().startswith(("readme", "manifest")):   # not documents
             continue
         meta = _front_matter(path) if path.suffix.lower() == ".md" else {}
         if path.suffix.lower() == ".md" and not meta.get("title"):
