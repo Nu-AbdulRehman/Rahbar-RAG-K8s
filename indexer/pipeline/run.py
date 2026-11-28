@@ -84,6 +84,9 @@ def run_pipeline(settings: IndexerSettings) -> int:
     if not entries:
         raise SystemExit(f"no documents found in {settings.corpus_dir}")
 
+    # Recency compares with the current versions only: a newer version that was archived
+    # on purpose (a rollback with pipeline.ops restore) must not re-archive the restored one.
+    current = [e for e in entries if e.location == "raw"]
     rows: list[dict] = []
     all_chunks: list[Chunk] = []
     original_words = 0
@@ -95,9 +98,11 @@ def run_pipeline(settings: IndexerSettings) -> int:
         except Exception as exc:  # a corrupt file is a verification result, not a crash
             doc, error = None, f"{type(exc).__name__}: {exc}"
         checks = [quality(doc, error, settings.verify_min_words, settings.verify_max_garbled),
-                  completeness(entry, path, doc), recency(entry, entries),
+                  completeness(entry, path, doc), recency(entry, current),
                   uniqueness_not_run()]
         action = decide(checks)
+        if action == "index" and entry.location == "archive":
+            action = "archive"            # rolled back or superseded earlier: stays archived
         moved = None
         if action == "quarantine":
             moved = lake.quarantine(entry, [c.reason for c in checks if c.passed is False],

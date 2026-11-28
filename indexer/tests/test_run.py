@@ -105,3 +105,29 @@ def test_invalidate_bumps_the_shared_generation_key() -> None:
     assert invalidate_cache(get_settings(), fake) == 1
     assert invalidate_cache(get_settings(), fake) == 2
     assert GENERATION_KEY == "rahbar:cache:generation"
+
+
+def test_a_rollback_survives_the_next_ingestion(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_data_lake: Path) -> None:
+    """Restoring an older version archives the newer one; the next run must keep the
+    restored version current, not re-archive it because a newer version exists."""
+    from pipeline.config import get_settings
+    from pipeline.lake import Lake
+
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    body = "Tuition is charged per credit hour for every course a student takes. " * 4
+    for name, version in (("fees-2026.md", "2026"), ("fees-2027.md", "2027")):
+        (raw / name).write_text(f"---\ndoc_id: fees\ndoc_version: {version}\n---\n"
+                                f"# Fees {version}\n{body}\n", encoding="utf-8")
+    stored: dict[str, Any] = {}
+    monkeypatch.setenv("CORPUS_DIR", str(raw))
+    monkeypatch.setattr("pipeline.store.sync", _fake_sync([], stored))
+    monkeypatch.setattr(run, "invalidate_cache", lambda s: 1)
+    monkeypatch.setattr("sys.argv", ["pipeline.run"])
+
+    assert run.main() == 0                           # 2026 archived, 2027 current
+    Lake(get_settings().data_lake_dir, str(raw)).restore("fees", "2026")
+    assert run.main() == 0
+    superseded = {c.source: c.superseded for c in stored["chunks"]}
+    assert superseded == {"fees-2026.md": False, "fees-2027.md": True}

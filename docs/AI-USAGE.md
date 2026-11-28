@@ -253,3 +253,4 @@
 - 2026-11-28 · ragops/e-coverage · C1 passing candidate per R10b: top_k 6 on rahbar-k6 (same 150/30 index) keeps recall@5 0.857, MRR 0.740 and faithfulness 0.692; latency p95 4.5 s vs 3.5 s (RAGOps C1).
 - 2026-11-28 · ragops/e-coverage · E2 coverage before Batch B: threshold chosen from a sweep (0.65: 26/28 in-domain covered, 2/13 off-topic), coverage 68 % of 41 live queries, below the 85 % minimum: exit 1; uncovered topics listed (RAGOps E2).
 - 2026-11-28 · ragops/e-coverage · Fixed Batch B being invisible beside fetch.py's _index.json (read_folder adds unlisted documents from front matter, skips README and MANIFEST); test shown red without it (RAGOps A2).
+- 2026-11-28 · ragops/e-coverage · Batch B ingested (3 quarantined, fee page archived, 33 embedded), changed document (1 embedded), deleted document (3 deleted, 0 left); fixed a rollback being undone by the next run's recency check; test shown red without it (RAGOps A1, A2).

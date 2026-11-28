@@ -1,0 +1,14 @@
+collection rahbar: 834 chunks
+  academic-rules                                           154
+  annual-report-2019-20                                    95
+  annual-report-2023-24                                    357
+  exam-conduct                                             8
+  exam-conduct-notice                                      4
+  faculty-entrepreneurship-and-technical-start-ups-policy  23
+  fee-structure-page                                       13
+  grading-page                                             11
+  it-acceptable-use                                        4
+  library-rules                                            8
+  prospectus-2026-academic-rules-and-regulations           36
+  student-counselling                                      4
+  student-handbook-jun-2026                                117
