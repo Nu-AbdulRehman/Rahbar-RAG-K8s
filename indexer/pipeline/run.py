@@ -13,7 +13,7 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 from .config import IndexerSettings, get_settings
@@ -73,7 +73,7 @@ def run_pipeline(settings: IndexerSettings) -> int:
     from .extract import extract
     from .lake import Lake
     from .store import sync
-    from .verify import completeness, decide, quality, recency, table, uniqueness_not_run
+    from .verify import Check, Duplicates, completeness, decide, quality, recency, table
 
     run_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     lake = Lake(settings.data_lake_dir, settings.corpus_dir)
@@ -87,6 +87,13 @@ def run_pipeline(settings: IndexerSettings) -> int:
     # Recency compares with the current versions only: a newer version that was archived
     # on purpose (a rollback with pipeline.ops restore) must not re-archive the restored one.
     current = [e for e in entries if e.location == "raw"]
+    # Uniqueness embeds with VERIFY_EMBED_MODEL, never EMBED_MODEL: the near-duplicate
+    # threshold was measured for that model, and a candidate collection built with another
+    # embedding model (C1) must verify the same documents the same way.
+    verify_settings = replace(settings, embed_model=settings.verify_embed_model)
+    duplicates = Duplicates(settings.verify_near_duplicate,
+                            lambda texts: embed(texts, verify_settings),
+                            settings.verify_embed_model, lake.root / "signatures.json")
     rows: list[dict] = []
     all_chunks: list[Chunk] = []
     original_words = 0
@@ -98,9 +105,17 @@ def run_pipeline(settings: IndexerSettings) -> int:
         except Exception as exc:  # a corrupt file is a verification result, not a crash
             doc, error = None, f"{type(exc).__name__}: {exc}"
         checks = [quality(doc, error, settings.verify_min_words, settings.verify_max_garbled),
-                  completeness(entry, path, doc), recency(entry, current),
-                  uniqueness_not_run()]
+                  completeness(entry, path, doc), recency(entry, current)]
+        if decide(checks) == "quarantine":
+            # Already out: embedding a garbled or truncated text proves nothing.
+            original = None
+            checks.append(Check("uniqueness", None, "not run: failed an earlier check"))
+        else:
+            unique, original = duplicates.check(entry, doc)
+            checks.append(unique)
         action = decide(checks)
+        if action != "quarantine":
+            duplicates.remember(original)
         if action == "index" and entry.location == "archive":
             action = "archive"            # rolled back or superseded earlier: stays archived
         moved = None
@@ -126,11 +141,15 @@ def run_pipeline(settings: IndexerSettings) -> int:
             raise SystemExit(f"{entry.file} produced no chunks; refusing to index without it")
         all_chunks.extend(pieces)
 
-    report = lake.write_report(f"verify-{run_id}.json", {"run": run_id, "documents": rows})
+    duplicates.save()
+    report = lake.write_report(f"verify-{run_id}.json", {
+        "run": run_id, "near_duplicate_threshold": settings.verify_near_duplicate,
+        "verify_embed_model": settings.verify_embed_model, "documents": rows})
     print(table(rows), flush=True)
     log("verification", report=str(report), indexed=sum(r["action"] != "quarantine" for r in rows),
         quarantined=sum(r["action"] == "quarantine" for r in rows),
-        archived=sum(r["action"] == "archive" for r in rows))
+        archived=sum(r["action"] == "archive" for r in rows),
+        uniqueness_texts_embedded=duplicates.embedded)
     if not all_chunks:
         raise SystemExit("every document failed verification; refusing to empty the index")
     stored_words = sum(len(c.text.split()) for c in all_chunks)

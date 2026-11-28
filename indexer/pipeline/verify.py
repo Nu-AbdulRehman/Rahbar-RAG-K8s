@@ -6,17 +6,23 @@ Every document gets pass or fail, with a reason, for four checks:
     completeness  the catalog has source, title and version; the file has pages and is
                   not truncated
     recency       no newer version of the same document (doc_id) is in the lake
-    uniqueness    no exact or near duplicate: a named slot, run by Member 2's check
+    uniqueness    no exact duplicate (SHA-256 of the extracted text) and no near duplicate
+                  (cosine of document embeddings at or above VERIFY_NEAR_DUPLICATE) of a
+                  document that was accepted before it
 
-A quality or completeness failure quarantines the document: it is not indexed. A recency
+A quality, completeness or uniqueness failure quarantines the document: it is not indexed. A recency
 failure archives it: it stays indexed with superseded: true, so retrieval excludes it
 unless a question asks for the older version, and it can be restored (A2).
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
+import math
 import re
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .lake import Entry, version_key
@@ -107,10 +113,131 @@ def recency(entry: Entry, lake_entries: list[Entry]) -> Check:
     return Check("recency", True, f"latest version of {entry.doc_id!r}")
 
 
-def uniqueness_not_run() -> Check:
-    return Check("uniqueness", None,
-                 "not run yet: exact and near-duplicate detection is Member 2's swap task "
-                 "(docs/planning/ragops-implementation-plan.md)")
+def text_hash(doc: Document) -> str:
+    """SHA-256 of the extracted text with whitespace collapsed: the same document saved
+    twice, or re-saved with other line endings, hashes the same."""
+    text = " ".join(" ".join(p.text for p in doc.pages).split())
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def windows(doc: Document, size: int = 300, most: int = 8) -> list[str]:
+    """Up to `most` windows of `size` words, spread evenly over the document. Their mean
+    embedding stands for the whole text, so two documents that share only a cover page or
+    a header are not near duplicates, and a long PDF costs at most `most` embeddings."""
+    words = " ".join(p.text for p in doc.pages).split()
+    starts = list(range(0, max(len(words), 1), size))
+    if len(starts) > most:
+        step = (len(starts) - 1) / (most - 1)
+        starts = [starts[round(i * step)] for i in range(most)]
+    return [" ".join(words[s:s + size]) for s in starts if words[s:s + size]]
+
+
+def _unit_mean(vectors: list[list[float]]) -> list[float]:
+    mean = [sum(col) / len(vectors) for col in zip(*vectors)]
+    norm = math.sqrt(sum(v * v for v in mean)) or 1.0
+    return [v / norm for v in mean]
+
+
+def _cosine(a: list[float], b: list[float]) -> float:
+    return sum(x * y for x, y in zip(a, b))          # both are unit vectors
+
+
+@dataclass
+class _Accepted:
+    entry: Entry
+    digest: str
+    vector: list[float]
+
+
+@dataclass
+class Duplicates:
+    """The uniqueness check (A1). Documents are checked in catalog order, so the one that
+    was in the lake first is the original and a later copy is the duplicate.
+
+    Only documents that end up indexed are remembered as originals: a document
+    quarantined for another reason is never the original of anything.
+
+    Versions of one document (same doc_id, another doc_version) are recency's business,
+    not uniqueness's: a new fee schedule is meant to look like the old one. Two files
+    with the same doc_id *and* version are compared, because that is a copy.
+
+    Document vectors come from `embed_texts` (the model in VERIFY_EMBED_MODEL, which is
+    fixed for every collection, so a candidate built with another EMBED_MODEL verifies
+    the same way). They are kept in `cache_path` by text hash and model, so an unchanged
+    corpus costs no embedding calls on the next run (A2)."""
+
+    threshold: float
+    embed_texts: Callable[[list[str]], list[list[float]]]
+    model: str
+    cache_path: Path | None = None
+    accepted: list[_Accepted] = field(default_factory=list)
+    _cache: dict[str, list[float]] | None = None
+    embedded: int = 0          # embedding calls this run made (texts, not documents)
+
+    def _vectors(self) -> dict[str, list[float]]:
+        if self._cache is None:
+            loaded: dict[str, list[float]] = {}
+            if self.cache_path is not None and self.cache_path.exists():
+                loaded = json.loads(self.cache_path.read_text(encoding="utf-8"))
+            self._cache = loaded
+        return self._cache
+
+    def _vector(self, digest: str, doc: Document) -> list[float]:
+        cache, key = self._vectors(), f"{self.model}:{digest}"
+        if key not in cache:
+            texts = windows(doc)
+            cache[key] = _unit_mean(self.embed_texts(texts))
+            self.embedded += len(texts)
+        return cache[key]
+
+    def save(self) -> None:
+        if self.cache_path is not None and self._cache is not None:
+            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+            self.cache_path.write_text(json.dumps(self._cache), encoding="utf-8")
+
+    def check(self, entry: Entry, doc: Document | None) -> tuple[Check, _Accepted | None]:
+        """The check's result, and the record to remember() if the document is indexed."""
+        if doc is None:
+            return Check("uniqueness", None, "not run: nothing was extracted"), None
+        digest = text_hash(doc)
+        for seen in self.accepted:
+            if seen.digest == digest and seen.entry.file != entry.file:
+                return Check("uniqueness", False,
+                             f"exact duplicate of {seen.entry.file} "
+                             f"(same SHA-256 {digest[:12]})"), None
+        vector = self._vector(digest, doc)
+        best: tuple[float, Entry] | None = None
+        for seen in self.accepted:
+            if seen.entry.doc_id == entry.doc_id and \
+                    seen.entry.doc_version != entry.doc_version:
+                continue                          # another version: the recency check's case
+            similarity = _cosine(vector, seen.vector)
+            if best is None or similarity > best[0]:
+                best = (similarity, seen.entry)
+        if best is not None and best[0] >= self.threshold:
+            return Check("uniqueness", False,
+                         f"near duplicate of {best[1].file} (cosine {best[0]:.3f} >= "
+                         f"{self.threshold:.3f})"), None
+        closest = f"closest {best[1].file} at {best[0]:.3f}" if best else "first document"
+        return Check("uniqueness", True,
+                     f"no duplicate ({closest}; threshold {self.threshold:.3f})"), \
+            _Accepted(entry, digest, vector)
+
+    def remember(self, record: _Accepted | None) -> None:
+        if record is not None:
+            self.accepted.append(record)
+
+
+def similarity_matrix(docs: dict[str, Document],
+                      embed_texts: Callable[[list[str]], list[list[float]]]) \
+        -> list[tuple[float, str, str]]:
+    """Every pair's cosine, highest first: the data the near-duplicate threshold is
+    chosen from (python -m pipeline.ops similarities)."""
+    vectors = {name: _unit_mean(embed_texts(windows(doc))) for name, doc in docs.items()}
+    names = sorted(vectors)
+    pairs = [(_cosine(vectors[a], vectors[b]), a, b)
+             for i, a in enumerate(names) for b in names[i + 1:]]
+    return sorted(pairs, reverse=True)
 
 
 def decide(checks: list[Check]) -> str:
