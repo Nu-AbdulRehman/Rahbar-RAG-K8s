@@ -31,4 +31,4 @@ data:
   DATA_LAKE_DIR: "/data"               # RAGOps: the ragops-data PVC in the ingestion Job (R4)
   CORPUS_DIR: "/data/raw"              # the lake's raw/, filled by corpus/fetch.py (Q4) and by intake of incoming/
   TRACE_DIR: "/results/traces"         # RAGOps D1/F4: the api's trace volume (ragops-results PVC); stdout gets the record too
-  GUARDRAIL_INJECTION_ACTION: "flag"   # RAGOps D4: flag | redact a chunk with instruction-like text (ADR 0005)
+  GUARDRAIL_INJECTION_ACTION: "redact" # RAGOps D4: flagged sentences cut from the chunk; "flag" let b09's planted claim through (ADR 0005)
