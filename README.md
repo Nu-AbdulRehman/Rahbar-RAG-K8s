@@ -175,6 +175,52 @@ e2e-eval on kind. cd.yml runs on every push to main: test, then build-push to Do
 tagged with the commit SHA, then deploy to an ephemeral kind cluster with a smoke test
 through the Ingress.
 
+## RAGOps (Assignment 03): the command for each part
+
+Plan: [docs/planning/ragops-implementation-plan.md](docs/planning/ragops-implementation-plan.md).
+Results land in `eval/results/` (Part A evidence in `eval/results/a/`). The Kubernetes Jobs
+that run these on the cluster are Part F; until they land, the commands below run against a
+local stack (Chroma on `127.0.0.1:8001`, Ollama on the host, the api from `.venv`). Set
+`CHROMA_HOST=127.0.0.1 CHROMA_PORT=8001 OLLAMA_URL=http://127.0.0.1:11434` for the eval
+scripts.
+
+**A. Data management.** Ingestion with verification, from the indexer image, with the data
+lake mounted (`DATA_LAKE_DIR`; raw documents in `$DATA_LAKE_DIR/raw`, a new batch in
+`$DATA_LAKE_DIR/incoming`):
+```bash
+python corpus/fetch.py --out .ragops-lake/raw            # the corpus into the lake
+docker run --rm --network rahbar -v "$PWD/.ragops-lake:/lake" -e DATA_LAKE_DIR=/lake \
+  -e CORPUS_DIR=/lake/raw -e CHROMA_HOST=chroma -e REDIS_HOST=redis \
+  -e OLLAMA_URL=http://host.docker.internal:11434 rahbar-indexer python -m pipeline.run
+# the same image, other commands:
+#   python -m pipeline.ops counts                    chunks per document (orphan check)
+#   python -m pipeline.ops status                    catalog: raw, archive, quarantine
+#   python -m pipeline.ops restore <doc_id> <ver>    roll back to an archived version
+cp corpus/batch_b/b*.* .ragops-lake/incoming/            # Batch B: then run the Job again
+```
+Each run prints the verification table and writes `reports/verify-<run>.json` and
+`reports/ingest-<run>.json` (embedded, metadata-only, unchanged, deleted chunk counts).
+Batch B's planted problems and expected outcomes: [corpus/batch_b/README.md](corpus/batch_b/README.md).
+
+**B. Offline testing at three levels** (module, component, end-to-end; `--runs 2` for the
+stochasticity check):
+```bash
+python eval/suite.py --api http://127.0.0.1:8000 --runs 2 --label baseline
+python eval/suite.py agreement eval/results/<run>-faithfulness-sample.jsonl   # judge vs hand labels
+```
+
+**C1. The change experiment** (decision R10): index the candidate collection with the same
+ingestion Job and point an api at it, then run the suite with `--collection` and a label:
+```bash
+# CHUNK_SIZE=200 CHUNK_OVERLAP=40 CHROMA_COLLECTION=rahbar-c200 for the ingestion run
+python eval/suite.py --api http://localhost:8001 --collection rahbar-c200 --label c200
+```
+
+**E. Drift and coverage:**
+```bash
+python eval/query_coverage.py --label coverage-before      # exits 1 below the threshold
+```
+
 ## Documents
 
 | | |
