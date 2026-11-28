@@ -1,0 +1,17 @@
+# The failing candidate and the bad release (R10, R10b): all-minilm embeddings, 150/30,
+# top_k 5. Gate: eval/results/c2/gate-minilm.txt (fail: recall@5 -9.4 points).
+#   kubectl apply -k k8s/release/minilm
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../candidate
+configMapGenerator:
+  - name: candidate-config
+    behavior: merge
+    literals:
+      - CHROMA_COLLECTION=rahbar-minilm
+      - EMBED_MODEL=all-minilm
+patches:
+  - target: {kind: Job, name: index-candidate}
+    patch: |-
+      - {op: replace, path: /metadata/name, value: index-rahbar-minilm}
