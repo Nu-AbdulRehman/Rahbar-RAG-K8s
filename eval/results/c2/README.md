@@ -17,3 +17,17 @@ Exit codes: 0 for k6, 1 for the other three. Release decision (Part C): release 
 (F3). all-minilm passes every latency rule only because most of its questions are declined
 under a relevance floor calibrated for nomic-embed-text (final-44-summary.md): the recall
 rule is the one that catches it.
+
+## The same gate on the cluster runs (minikube Jobs, eval/results/cluster/)
+
+| candidate | recall@5 drop | faithfulness | p95 s | p50 ratio | decision | file |
+| --- | --- | --- | --- | --- | --- | --- |
+| k6 | 0.000 | 0.667 | 3.51 | 1.042 | **pass** | ../cluster/gate-k6.txt |
+| minilm | 0.094 | 0.727 | 2.57 | 0.012 | **fail** (recall@5) | ../cluster/gate-minilm.txt |
+
+Same decisions as locally. k6's faithfulness on the cluster (10 of 15 judged supported)
+is 0.119 under the cluster baseline (11 of 14) but above the 0.64 floor: one more answered
+question and one fewer supported verdict, within the judge's measured 2-in-8 disagreement.
+Answer correctness is equal (0.355 both); q41 was lost and q43 gained. The F2
+demonstration (the gate Job failing minilm, then passing it after a ConfigMap edit) is
+eval/results/f/03-gate-configmap-edit.txt.

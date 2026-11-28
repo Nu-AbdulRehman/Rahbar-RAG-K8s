@@ -3,9 +3,10 @@
 # mounted into the eval Job, so editing a threshold changes the outcome with no rebuild (F2).
 # Keep the two copies equal: eval/test_gate.py fails when they differ.
 #
-# Every number below comes from our own runs on the 44-question golden set
-# (eval/results/final-44-summary.md): baseline-44 is rahbar-base, 150/30, nomic-embed-text,
-# top_k 5, run twice with seed 42.
+# Every number below comes from our own runs on the 44-question golden set, in two
+# environments: the local stack (eval/results/final-44-summary.md, baseline-44) and the
+# minikube Jobs (eval/results/cluster/, baseline-cluster). Both baselines are 150/30,
+# nomic-embed-text, top_k 5, run twice with seed 42.
 #
 # Rule kinds:  min / max (absolute)   max_drop (baseline - candidate)
 #              max_ratio (candidate / baseline)   not_below_baseline (true)
@@ -16,22 +17,25 @@ gate:
     # o40 0.625 lose 9.4, 4.7 and 6.3 points (fail).
     max_drop: 0.02
   faithfulness:
-    # Baseline 0.714 = 10 of 14 judged answers supported, identical in both seeded runs.
-    # The judge agrees with our hand labels on 6 of 8 (75 %), one error each way, so one
-    # verdict can flip on wording alone: the floor is the baseline minus one judged answer
-    # (0.714 - 1/14 = 0.643), rounded down. Never above what the baseline itself reaches.
+    # Baseline 0.714 local (10 of 14 judged answers supported), 0.786 cluster (11 of 14),
+    # identical in both seeded runs of each. The judge agrees with our hand labels on 6 of 8
+    # (75 %), one error each way, so one verdict can flip on wording alone: the floor is the
+    # lower baseline minus one judged answer (0.714 - 1/14 = 0.643), rounded down, so it
+    # holds on both laptops and is never above what a baseline reaches. k6: 0.733 local,
+    # 0.667 cluster (10 of 15).
     min: 0.64
   latency_p95_s:
     # Half of REQUEST_BUDGET_SECONDS (50 s, rahbar-config): a request at p95 that needs its
     # one generation retry (generation.py) still ends inside the budget instead of in the
     # canned answer. Local p95 swings from 3 s to 32 s on the same code (Ollama prompt-cache
     # stalls, final-44-summary.md), so this is a ceiling, not a tight bound; p50 below is
-    # the stable latency signal. Baseline 6.69 s, k6 12.54 s (isolated).
+    # the stable latency signal. Baseline 6.69 s local, 3.25 s cluster; k6 12.54 s local
+    # (isolated), 3.51 s cluster.
     max: 25
   latency_p50_s:
-    # Medians stay at 2.2-2.8 s in every nomic run; the two seeded baseline runs differ by
-    # 0.158 s (6.5 %). A candidate may be at most 1.5x the baseline median, far outside
-    # that noise.
+    # Medians stay at 2.2-2.8 s locally and 1.6-1.7 s on the cluster in every nomic run; the
+    # two seeded baseline runs differ by 0.158 s (6.5 %) locally and 0.094 s (5.8 %) on the
+    # cluster. A candidate may be at most 1.5x the baseline median, far outside that noise.
     max_ratio: 1.5
   abstention_correctness:
     # The brief's rule: not lower than the baseline (1.00 on 12 unanswerable questions).
