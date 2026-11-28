@@ -40,6 +40,8 @@ class Settings:
     # docs/PIPELINE.md, "Relevance floor".
     relevance_floor: float = 0.65
     temperature: float = 0.2
+    # Fixed so two runs of the evaluation suite can be compared (RAGOps B, decision R8).
+    llm_seed: int = 42
     llm_model: str = "llama3.2:3b"
     ollama_url: str = "http://host.minikube.internal:11434"
     hosted_base_url: str = ""        # e.g. an OpenAI-compatible endpoint
@@ -82,6 +84,7 @@ def get_settings() -> Settings:
         top_k=_int("TOP_K", 5),
         relevance_floor=_float("RELEVANCE_FLOOR", 0.65),
         temperature=_float("TEMPERATURE", 0.2),
+        llm_seed=_int("LLM_SEED", 42),
         llm_model=os.environ.get("LLM_MODEL", "llama3.2:3b"),
         ollama_url=os.environ.get("OLLAMA_URL", "http://host.minikube.internal:11434"),
         hosted_base_url=os.environ.get("HOSTED_BASE_URL", ""),
