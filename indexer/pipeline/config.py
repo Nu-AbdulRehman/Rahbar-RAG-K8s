@@ -30,6 +30,10 @@ class IndexerSettings:
     data_lake_dir: str = "/tmp/ragops"
     verify_min_words: int = 20          # fewer extracted words fails the quality check
     verify_max_garbled: float = 0.30    # share of unreadable characters that fails quality
+    # Uniqueness (A1): document cosine at or above this is a near duplicate. Measured with
+    # verify_embed_model; the pairs it was chosen from are in k8s/base/ragops-gate.yaml.
+    verify_near_duplicate: float = 0.95
+    verify_embed_model: str = "nomic-embed-text"
 
 
 def get_settings() -> IndexerSettings:
@@ -52,4 +56,6 @@ def get_settings() -> IndexerSettings:
         data_lake_dir=os.environ.get("DATA_LAKE_DIR", "/tmp/ragops"),
         verify_min_words=int(os.environ.get("VERIFY_MIN_WORDS", 20)),
         verify_max_garbled=float(os.environ.get("VERIFY_MAX_GARBLED", 0.30)),
+        verify_near_duplicate=float(os.environ.get("VERIFY_NEAR_DUPLICATE", 0.95)),
+        verify_embed_model=os.environ.get("VERIFY_EMBED_MODEL", "nomic-embed-text"),
     )
