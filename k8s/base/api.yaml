@@ -56,7 +56,7 @@ spec:
           volumeMounts:
             - {name: tmp, mountPath: /tmp}
             - {name: results, mountPath: /results}   # traces-<date>-<pod>.jsonl (RAGOps D1, F4)
-          resources:                  # peak 186m at start-up, 6m in a 40-question burst; 129Mi (docs/evidence/kubectl-top.txt)
+          resources:                  # peak 186m at start-up, 129Mi (docs/evidence/kubectl-top.txt); RAGOps: 87m, 74Mi in an 82-question burst (eval/results/f5)
             requests:
               cpu: 100m
               memory: 160Mi

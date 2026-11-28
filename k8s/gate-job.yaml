@@ -46,8 +46,8 @@ spec:
               python scripts/gate.py "$base" "$cand"
               --out "/results/gate/$(date -u +%Y%m%dT%H%M%SZ)-$CANDIDATE-vs-$BASELINE.json"
           env:
-            - {name: BASELINE, value: baseline-44}
-            - {name: CANDIDATE, value: minilm-44}
+            - {name: BASELINE, value: baseline-cluster}
+            - {name: CANDIDATE, value: minilm-cluster}
           envFrom:
             - configMapRef: {name: ragops-gate}      # GATE_CONFIG=/config/gate.yaml
           volumeMounts:
