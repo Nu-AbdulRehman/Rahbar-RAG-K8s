@@ -1,0 +1,404 @@
+{
+  "threshold": 0.65,
+  "min_share": 0.85,
+  "live_queries": 41,
+  "golden_questions": 34,
+  "covered": 34,
+  "coverage": 0.8293,
+  "passed": false,
+  "uncovered_by_topic": {
+    "attendance": [
+      "is 75% attendance enough to sit the final"
+    ],
+    "counselling": [
+      "is there a counsellor i can talk to about exam stress"
+    ],
+    "course repeat": [
+      "if i repeat a course is my grade capped"
+    ],
+    "it accounts": [
+      "how do i get my university email account"
+    ],
+    "library": [
+      "can i book a group study room in the library"
+    ],
+    "sports": [
+      "what are the gym timings on campus"
+    ],
+    "transport": [
+      "how do i register for the university bus service"
+    ]
+  },
+  "queries": [
+    {
+      "id": "l01",
+      "query": "my cgpa is 1.9 am i on probation now",
+      "topic": "academic standing",
+      "nearest_golden": "q24",
+      "nearest_question": "If my CGPA slips below the minimum, what academic status am I put on, and what is the limit?",
+      "similarity": 0.7001,
+      "covered": true
+    },
+    {
+      "id": "l02",
+      "query": "what gpa do i need so i'm not on academic warning",
+      "topic": "academic standing",
+      "nearest_golden": "q01",
+      "nearest_question": "What CGPA does an undergraduate need to stay off academic warning?",
+      "similarity": 0.7696,
+      "covered": true
+    },
+    {
+      "id": "l03",
+      "query": "how many classes can i miss before i get F in a course",
+      "topic": "attendance",
+      "nearest_golden": "q02",
+      "nearest_question": "What happens if I do not meet the attendance requirement in a course?",
+      "similarity": 0.659,
+      "covered": true
+    },
+    {
+      "id": "l04",
+      "query": "is 75% attendance enough to sit the final",
+      "topic": "attendance",
+      "nearest_golden": "q02",
+      "nearest_question": "What happens if I do not meet the attendance requirement in a course?",
+      "similarity": 0.5902,
+      "covered": false
+    },
+    {
+      "id": "l05",
+      "query": "what does clause 1.21 say about attendance",
+      "topic": "attendance",
+      "nearest_golden": "q13",
+      "nearest_question": "What does clause 1.21 of the academic rules require?",
+      "similarity": 0.7831,
+      "covered": true
+    },
+    {
+      "id": "l06",
+      "query": "how much is one credit hour for a bachelors student",
+      "topic": "fees",
+      "nearest_golden": "q14",
+      "nearest_question": "What is the tuition fee per credit hour for BS programmes?",
+      "similarity": 0.8021,
+      "covered": true
+    },
+    {
+      "id": "l07",
+      "query": "fee per credit hour BS 2026",
+      "topic": "fees",
+      "nearest_golden": "q14",
+      "nearest_question": "What is the tuition fee per credit hour for BS programmes?",
+      "similarity": 0.7242,
+      "covered": true
+    },
+    {
+      "id": "l08",
+      "query": "how much do i pay to get my paper rechecked",
+      "topic": "fees",
+      "nearest_golden": "q15",
+      "nearest_question": "What is the paper rechecking fee per course?",
+      "similarity": 0.8645,
+      "covered": true
+    },
+    {
+      "id": "l09",
+      "query": "if i drop a course after registering do i get my money back",
+      "topic": "fees",
+      "nearest_golden": "q04",
+      "nearest_question": "Do I get my fee back if I withdraw from a course?",
+      "similarity": 0.7755,
+      "covered": true
+    },
+    {
+      "id": "l10",
+      "query": "refund policy when withdrawing from a course",
+      "topic": "fees",
+      "nearest_golden": "q04",
+      "nearest_question": "Do I get my fee back if I withdraw from a course?",
+      "similarity": 0.824,
+      "covered": true
+    },
+    {
+      "id": "l11",
+      "query": "can i take a semester off and come back later",
+      "topic": "semester freeze",
+      "nearest_golden": "q22",
+      "nearest_question": "What about if I freeze the semester instead?",
+      "similarity": 0.7244,
+      "covered": true
+    },
+    {
+      "id": "l12",
+      "query": "how many semesters can i freeze in total",
+      "topic": "semester freeze",
+      "nearest_golden": "q05",
+      "nearest_question": "For how many semesters can I freeze my admission?",
+      "similarity": 0.8889,
+      "covered": true
+    },
+    {
+      "id": "l13",
+      "query": "what is the fee for freezing a semester",
+      "topic": "semester freeze",
+      "nearest_golden": "q22",
+      "nearest_question": "What about if I freeze the semester instead?",
+      "similarity": 0.7827,
+      "covered": true
+    },
+    {
+      "id": "l14",
+      "query": "how long does the summer semester last",
+      "topic": "summer semester",
+      "nearest_golden": "q12",
+      "nearest_question": "How long is the summer semester?",
+      "similarity": 0.9377,
+      "covered": true
+    },
+    {
+      "id": "l15",
+      "query": "how many weeks of teaching in a normal semester",
+      "topic": "summer semester",
+      "nearest_golden": "q11",
+      "nearest_question": "How many weeks of teaching does a regular semester have?",
+      "similarity": 0.9625,
+      "covered": true
+    },
+    {
+      "id": "l16",
+      "query": "i missed my final because i was sick can i retake it",
+      "topic": "retake exams",
+      "nearest_golden": "q07",
+      "nearest_question": "Will a retake exam be granted if I missed the exam because of a cough or cold?",
+      "similarity": 0.8073,
+      "covered": true
+    },
+    {
+      "id": "l17",
+      "query": "how many grade points is B+",
+      "topic": "grading",
+      "nearest_golden": "q06",
+      "nearest_question": "How many grade points is a B+ worth in a BS programme?",
+      "similarity": 0.9024,
+      "covered": true
+    },
+    {
+      "id": "l18",
+      "query": "what grade points does an A- carry",
+      "topic": "grading",
+      "nearest_golden": "q06",
+      "nearest_question": "How many grade points is a B+ worth in a BS programme?",
+      "similarity": 0.6885,
+      "covered": true
+    },
+    {
+      "id": "l19",
+      "query": "am i allowed to use chatgpt for my lit review",
+      "topic": "generative ai",
+      "nearest_golden": "q08",
+      "nearest_question": "Am I allowed to use generative AI to write a literature review?",
+      "similarity": 0.6834,
+      "covered": true
+    },
+    {
+      "id": "l20",
+      "query": "what are the rules about using AI tools in assignments",
+      "topic": "generative ai",
+      "nearest_golden": "q08",
+      "nearest_question": "Am I allowed to use generative AI to write a literature review?",
+      "similarity": 0.6719,
+      "covered": true
+    },
+    {
+      "id": "l21",
+      "query": "how do i transfer to the lahore campus",
+      "topic": "campus transfer",
+      "nearest_golden": "q09",
+      "nearest_question": "On what grounds can a student transfer to another campus of the university?",
+      "similarity": 0.7019,
+      "covered": true
+    },
+    {
+      "id": "l22",
+      "query": "can i register for a course without passing its prereq",
+      "topic": "course registration",
+      "nearest_golden": "q03",
+      "nearest_question": "Can I register for a course if I have not passed its prerequisite?",
+      "similarity": 0.919,
+      "covered": true
+    },
+    {
+      "id": "l23",
+      "query": "if i repeat a course is my grade capped",
+      "topic": "course repeat",
+      "nearest_golden": "q02",
+      "nearest_question": "What happens if I do not meet the attendance requirement in a course?",
+      "similarity": 0.6272,
+      "covered": false
+    },
+    {
+      "id": "l24",
+      "query": "minimum cgpa required to graduate",
+      "topic": "graduation",
+      "nearest_golden": "q01",
+      "nearest_question": "What CGPA does an undergraduate need to stay off academic warning?",
+      "similarity": 0.703,
+      "covered": true
+    },
+    {
+      "id": "l25",
+      "query": "what did the 2023 rules say about the length of a semester",
+      "topic": "older rules",
+      "nearest_golden": "q25",
+      "nearest_question": "How did the length of a regular semester change between the 2023 rules and the 2026 handbook?",
+      "similarity": 0.8955,
+      "covered": true
+    },
+    {
+      "id": "l26",
+      "query": "what happens if i stay on probation for two semesters",
+      "topic": "academic standing",
+      "nearest_golden": "q05",
+      "nearest_question": "For how many semesters can I freeze my admission?",
+      "similarity": 0.675,
+      "covered": true
+    },
+    {
+      "id": "l27",
+      "query": "tuition fee for MS per credit hour",
+      "topic": "fees",
+      "nearest_golden": "q14",
+      "nearest_question": "What is the tuition fee per credit hour for BS programmes?",
+      "similarity": 0.7666,
+      "covered": true
+    },
+    {
+      "id": "l28",
+      "query": "do medical leaves count towards attendance",
+      "topic": "attendance",
+      "nearest_golden": "q02",
+      "nearest_question": "What happens if I do not meet the attendance requirement in a course?",
+      "similarity": 0.6999,
+      "covered": true
+    },
+    {
+      "id": "l29",
+      "query": "how many books can i borrow from the library",
+      "topic": "library",
+      "nearest_golden": "q26",
+      "nearest_question": "How many books can an undergraduate borrow from the Central Library, and for how long?",
+      "similarity": 0.8747,
+      "covered": true
+    },
+    {
+      "id": "l30",
+      "query": "what is the fine for returning a library book late",
+      "topic": "library",
+      "nearest_golden": "q31",
+      "nearest_question": "What is the fine for returning a library book late?",
+      "similarity": 0.9963,
+      "covered": true
+    },
+    {
+      "id": "l31",
+      "query": "can i book a group study room in the library",
+      "topic": "library",
+      "nearest_golden": "q26",
+      "nearest_question": "How many books can an undergraduate borrow from the Central Library, and for how long?",
+      "similarity": 0.5679,
+      "covered": false
+    },
+    {
+      "id": "l32",
+      "query": "what time does the university bus leave in the evening",
+      "topic": "transport",
+      "nearest_golden": "q32",
+      "nearest_question": "What time does the university bus leave campus on weekdays?",
+      "similarity": 0.8707,
+      "covered": true
+    },
+    {
+      "id": "l33",
+      "query": "how do i register for the university bus service",
+      "topic": "transport",
+      "nearest_golden": "q32",
+      "nearest_question": "What time does the university bus leave campus on weekdays?",
+      "similarity": 0.6092,
+      "covered": false
+    },
+    {
+      "id": "l34",
+      "query": "when are the cricket team trials",
+      "topic": "sports",
+      "nearest_golden": "q34",
+      "nearest_question": "When are the cricket team trials held?",
+      "similarity": 0.973,
+      "covered": true
+    },
+    {
+      "id": "l35",
+      "query": "what are the gym timings on campus",
+      "topic": "sports",
+      "nearest_golden": "q32",
+      "nearest_question": "What time does the university bus leave campus on weekdays?",
+      "similarity": 0.6272,
+      "covered": false
+    },
+    {
+      "id": "l36",
+      "query": "is there a counsellor i can talk to about exam stress",
+      "topic": "counselling",
+      "nearest_golden": "q30",
+      "nearest_question": "How do I book an appointment with the campus counsellor?",
+      "similarity": 0.6403,
+      "covered": false
+    },
+    {
+      "id": "l37",
+      "query": "how do i book an appointment with the student counsellor",
+      "topic": "counselling",
+      "nearest_golden": "q30",
+      "nearest_question": "How do I book an appointment with the campus counsellor?",
+      "similarity": 0.9284,
+      "covered": true
+    },
+    {
+      "id": "l38",
+      "query": "can i take my phone into the exam hall",
+      "topic": "exam conduct",
+      "nearest_golden": "q28",
+      "nearest_question": "Can I keep my mobile phone at my seat during an exam?",
+      "similarity": 0.8132,
+      "covered": true
+    },
+    {
+      "id": "l39",
+      "query": "how late can i arrive for an exam and still sit it",
+      "topic": "exam conduct",
+      "nearest_golden": "q02",
+      "nearest_question": "What happens if I do not meet the attendance requirement in a course?",
+      "similarity": 0.6604,
+      "covered": true
+    },
+    {
+      "id": "l40",
+      "query": "how do i get my university email account",
+      "topic": "it accounts",
+      "nearest_golden": "q29",
+      "nearest_question": "What happens to my university account if I share my password?",
+      "similarity": 0.6459,
+      "covered": false
+    },
+    {
+      "id": "l41",
+      "query": "what are the cafeteria opening hours",
+      "topic": "cafeteria",
+      "nearest_golden": "q33",
+      "nearest_question": "What are the cafeteria opening hours?",
+      "similarity": 0.9956,
+      "covered": true
+    }
+  ],
+  "embed_model": "nomic-embed-text"
+}

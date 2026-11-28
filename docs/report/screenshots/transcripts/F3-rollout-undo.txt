@@ -1,0 +1,34 @@
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ kubectl rollout undo deployment/api -n rahbar
+Warning: resource deployments/api was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/api rolled back
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ sleep 3; kubectl rollout status deployment/api -n rahbar
+Waiting for deployment "api" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "api" rollout to finish: 1 old replicas are pending termination...
+deployment "api" successfully rolled out
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ kubectl rollout history deployment/api -n rahbar
+deployment.apps/api 
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+3         <none>
+5         release k6 (gate pass)
+6         reset to baseline; api image with the scoped cache
+11        reset to baseline before the F3 screenshots
+17        bad release: all-minilm
+18        release k6 (gate pass)
+
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ sleep 10  # let ingress-nginx drop the old pods from its endpoints
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ ID=$(curl -s -X POST "http://$(minikube ip)/api/ask" -H "Host: rahbar.local" -H "Content-Type: application/json" -d '{"question": "What did the 2023 rules say about attendance?"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["request_id"])'); echo "trace id: $ID"
+trace id: 99e5ae441e10d7fdba69899bed475fd6
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ kubectl logs -n rahbar -l app=api --tail=-1 | grep "\"trace_id\": \"$ID\"" | python3 -m json.tool | grep -E '"(trace_id|collection|model|version|dimension|top_k)"'
+    "trace_id": "99e5ae441e10d7fdba69899bed475fd6",
+        "model": "nomic-embed-text",
+        "version": "0a109f422b47",
+        "dimension": 768
+    "collection": "rahbar-k6",
+        "top_k": 6,
+        "model": "llama3.2:3b",

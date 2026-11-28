@@ -1,0 +1,57 @@
+$ kubectl delete job ragops-eval -n rahbar --ignore-not-found
+job.batch "ragops-eval" deleted from rahbar namespace
+  # - {name: LABEL, value: baseline-cluster}
+  # - {name: CHROMA_COLLECTION, value: rahbar}
+  # - {name: EMBED_MODEL, value: nomic-embed-text}
+  # - {name: TOP_K, value: "5"}
+  # - {name: RUNS, value: "2"}
+$ kubectl appjob/ragops-eval: Complete
+$ kubectl get job ragops-evajob/ragops-eval: Complete
+$ kubectl get job ragops-eval -n rahbar
+NAME          STATUS     COMPLETIONS   DURATION   AGE
+ragops-eval   Complete   1/1           6m42s      6m51s
+$ kubectl logs -n rahbar job/ragops-eval
+run 1 of 2 done
+run 2 of 2 done
+| level | metric | value |
+| --- | --- | --- |
+| module | paraphrase mean cosine | 0.760 |
+| module | unrelated mean cosine | 0.368 |
+| module | gap | 0.392 |
+| module | embed ms per chunk (mean) | 74.770 |
+| module | determinism max |diff| | 0.000 |
+| component | recall@3 | 0.500 |
+| component | recall@5 | 0.562 |
+| component | MRR | 0.465 |
+| component | nDCG@5 | 0.490 |
+| component | recall@5 with typos | 0.547 |
+| component | MRR with typos | 0.468 |
+| end-to-end | faithfulness | 0.786 |
+| end-to-end | abstention correctness | 1.000 |
+| end-to-end | citation validity | 1.000 |
+| end-to-end | latency p50 (s) | 2.237 |
+| end-to-end | latency p95 (s) | 7.028 |
+
+stochasticity (run 2 - run 1), non-zero only: {
+ "module.embed_ms_per_chunk_mean": 5.63,
+ "module.embed_ms_per_chunk_p95": 4.71,
+ "end_to_end.latency_p50_s": 0.241,
+ "end_to_end.latency_p95_s": 5.403
+}
+
+results written to /results/eval/20261128T133413Z-baseline-cluster.json
+gate: /results/eval/20261128T133413Z-baseline-cluster.json against /results/eval/20261128T133413Z-baseline-cluster.json
+release gate, config /config/gate.yaml
+  baseline:  baseline-cluster (rahbar, nomic-embed-text, top_k 5, 20261128T133413Z)
+  candidate: baseline-cluster (rahbar, nomic-embed-text, top_k 5, 20261128T133413Z)
+
+metric                   rule                  baseline candidate  result  detail
+------------------------------------------------------------------------------------------------
+recall_at_5              max_drop 0.02           0.5625    0.5625  PASS    drop +0.0000 <= 0.0200
+faithfulness             min 0.64                0.7857    0.7857  PASS    0.7857 >= 0.64
+latency_p95_s            max 25                  7.0280    7.0280  PASS    7.028 <= 25
+latency_p50_s            max_ratio 1.5           2.2370    2.2370  PASS    2.237 / 2.237 = 1.000 <= 1.5
+abstention_correctness   not below baseline      1.0000    1.0000  PASS    1 >= baseline 1
+citation_validity        min 0.95                1.0000    1.0000  PASS    1 >= 0.95
+
+GATE PASS: release the candidate

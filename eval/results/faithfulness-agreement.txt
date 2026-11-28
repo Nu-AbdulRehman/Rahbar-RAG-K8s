@@ -1,0 +1,10 @@
+# Faithfulness judge vs hand labels (RAGOps B end-to-end)
+# Sample: eval/results/20261128T063735Z-baseline-faithfulness-sample.jsonl (8 answered questions from the GPU baseline)
+# Labelled by Member 1 (q01, q02, q05, q06) and Member 2 (q09, q10, q11, q12), 2026-11-28
+
+$ python eval/suite.py agreement eval/results/20261128T063735Z-baseline-faithfulness-sample.jsonl
+judge agrees with the hand labels on 6 of 8 (75%)
+
+Disagreements:
+- q02: judge unsupported, humans supported. The context states the F/A grade word for word (clause 1.22): the judge is too strict.
+- q12: judge supported, humans not supported. The answer '8 weeks' is not in the retrieved handbook passage on summer rules: the judge is too lenient.

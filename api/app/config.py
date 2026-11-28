@@ -40,6 +40,8 @@ class Settings:
     # docs/PIPELINE.md, "Relevance floor".
     relevance_floor: float = 0.65
     temperature: float = 0.2
+    # Fixed so two runs of the evaluation suite can be compared (RAGOps B, decision R8).
+    llm_seed: int = 42
     llm_model: str = "llama3.2:3b"
     ollama_url: str = "http://host.minikube.internal:11434"
     hosted_base_url: str = ""        # e.g. an OpenAI-compatible endpoint
@@ -62,6 +64,13 @@ class Settings:
     cache_threshold: float = 0.96
     cache_max_entries: int = 200     # per cache generation; the newest are kept
 
+    # RAGOps D1, D4, F4: where the full trace records go (the ragops-results volume on the
+    # cluster; empty means stdout only), what the retrieval rail does to a flagged chunk,
+    # and the pod name that keeps each replica's trace file separate.
+    trace_dir: str = ""
+    guardrail_injection_action: str = "flag"     # flag | redact (services/guardrails.py)
+    pod_name: str = "-"
+
     log_level: str = "INFO"
     serve_ui_dir: str = ""           # SERVE_UI_DIR: make dev only; the ui Deployment serves it
 
@@ -69,6 +78,9 @@ class Settings:
         # Facts and JSON belong at low temperature (section 3.4); refuse to start otherwise.
         if not 0.0 <= self.temperature <= 0.3:
             raise ValueError(f"TEMPERATURE must be between 0 and 0.3, got {self.temperature}")
+        if self.guardrail_injection_action not in ("flag", "redact"):
+            raise ValueError("GUARDRAIL_INJECTION_ACTION must be flag or redact, got "
+                             f"{self.guardrail_injection_action!r}")
 
 
 def get_settings() -> Settings:
@@ -82,6 +94,7 @@ def get_settings() -> Settings:
         top_k=_int("TOP_K", 5),
         relevance_floor=_float("RELEVANCE_FLOOR", 0.65),
         temperature=_float("TEMPERATURE", 0.2),
+        llm_seed=_int("LLM_SEED", 42),
         llm_model=os.environ.get("LLM_MODEL", "llama3.2:3b"),
         ollama_url=os.environ.get("OLLAMA_URL", "http://host.minikube.internal:11434"),
         hosted_base_url=os.environ.get("HOSTED_BASE_URL", ""),
@@ -96,6 +109,9 @@ def get_settings() -> Settings:
         redis_timeout=_float("REDIS_TIMEOUT_SECONDS", 0.5),
         cache_threshold=_float("CACHE_THRESHOLD", 0.96),
         cache_max_entries=_int("CACHE_MAX_ENTRIES", 200),
+        trace_dir=os.environ.get("TRACE_DIR", ""),
+        guardrail_injection_action=os.environ.get("GUARDRAIL_INJECTION_ACTION", "flag"),
+        pod_name=os.environ.get("HOSTNAME", "-"),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
         serve_ui_dir=os.environ.get("SERVE_UI_DIR", ""),
     )

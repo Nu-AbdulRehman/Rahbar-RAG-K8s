@@ -27,7 +27,8 @@ def test_every_chunk_carries_all_metadata_fields() -> None:
     chunks = _fixture_chunks()
     assert chunks
     for c in chunks:
-        assert set(c.metadata()) == {"source", "section", "page", "doc_version", "superseded"}
+        assert set(c.metadata()) == {"source", "section", "page", "doc_version", "superseded",
+                                     "doc_id", "content_hash"}
         assert c.section and c.page == 1 and c.doc_version in {"2023", "2026"}
     old = {c.superseded for c in chunks if c.source == "academic-rules-2023.md"}
     assert old == {True}

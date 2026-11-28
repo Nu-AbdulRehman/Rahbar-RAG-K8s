@@ -19,6 +19,10 @@ class OllamaEmbedder:
         # Length of the vectors this model returns, known after the first call. The
         # embedding-pin check compares it with the index (services/pin.py).
         self.dimension: int | None = None
+        # The model's Ollama digest, its "version" in the trace record (RAGOps D1): the
+        # name alone does not change when a model is re-pulled. Looked up once.
+        self.digest: str | None = None
+        self.tags_url = f"{settings.ollama_url.rstrip('/')}/api/tags"
 
     def embed(self, text: str) -> list[float]:
         last = self._last
@@ -33,3 +37,16 @@ class OllamaEmbedder:
         self._last = (text, vector)
         self.dimension = len(vector)
         return list(vector)
+
+    def lookup_digest(self) -> str | None:
+        """GET /api/tags once and keep this model's digest (first 12 hex characters, as
+        `ollama list` prints it). A failure leaves it None and is retried next time."""
+        if self.digest is None:
+            response = self.client.get(self.tags_url)
+            response.raise_for_status()
+            names = {self.model, f"{self.model}:latest"}
+            for m in response.json().get("models") or []:
+                if m.get("name") in names or m.get("model") in names:
+                    self.digest = str(m.get("digest", ""))[:12] or None
+                    break
+        return self.digest

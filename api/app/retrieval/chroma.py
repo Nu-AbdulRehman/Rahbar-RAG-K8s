@@ -7,6 +7,7 @@ from typing import Any, Protocol
 
 from ..config import Settings
 from ..schemas import Passage
+from ..timing import stage
 
 
 class Embedder(Protocol):
@@ -49,10 +50,13 @@ class ChromaRetriever:
         return dict(self.collection().metadata or {})
 
     def retrieve(self, question: str, k: int, include_superseded: bool = False) -> list[Passage]:
-        vector = self.embedder.embed(question)          # the pinned EMBED_MODEL
+        with stage("embed"):
+            vector = self.embedder.embed(question)      # the pinned EMBED_MODEL
         where = None if include_superseded else {"superseded": False}
-        result = self.collection().query(query_embeddings=[vector], n_results=k, where=where,
-                                         include=["documents", "metadatas", "distances"])
+        with stage("retrieve"):
+            result = self.collection().query(query_embeddings=[vector], n_results=k,
+                                             where=where,
+                                             include=["documents", "metadatas", "distances"])
         passages = []
         for chunk_id, text, meta, distance in zip(result["ids"][0], result["documents"][0],
                                                    result["metadatas"][0],
@@ -63,5 +67,13 @@ class ChromaRetriever:
                 section=str(meta.get("section", "")),
                 page=int(page) if page is not None else None,
                 score=round(1.0 - float(distance), 4),   # cosine distance to similarity
+                doc_id=_str(meta.get("doc_id")), doc_version=_str(meta.get("doc_version")),
+                superseded=meta.get("superseded") if isinstance(meta.get("superseded"), bool)
+                else None,
+                content_hash=_str(meta.get("content_hash")),
             ))
         return passages
+
+
+def _str(value: Any) -> str | None:
+    return None if value is None else str(value)

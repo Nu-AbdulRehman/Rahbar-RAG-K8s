@@ -36,7 +36,9 @@ What each part of the system sees and keeps:
 
 The prompt, the history and the rewritten query are logged at DEBUG only
 (api/app/services/answer.py), and the ConfigMap pins `LOG_LEVEL=INFO`. Request ids,
-chunk ids, scores and flags are logged; question text is not.
+chunk ids, scores and flags are logged; question text is not, except in the RAGOps trace
+line, which ADR 0005 adds (query and answer at INFO; prompt and passages on the trace
+volume only).
 
 ## Options considered
 - **Hosted model as the default** (an OpenAI-compatible endpoint). Faster and stronger

@@ -25,6 +25,7 @@ from .retrieval import get_retriever
 from .routes import ask, health, metrics
 from .services.pin import pin_conflict
 from .services.pin import report as pin_report
+from .services.trace import TraceSink
 
 log = logging.getLogger("rahbar.api")
 
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.provider = get_provider(settings)
     app.state.cache = get_cache(settings, embedder)
     app.state.embedder = embedder
+    app.state.trace_sink = TraceSink(settings.trace_dir, settings.pod_name)
     app.state.pin_conflict = None
     # The embedding pin (section 4.4), checked once here and again on every /readyz, since
     # a re-index can change it while the pod runs. This process only reads the index.
@@ -52,7 +54,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         "api started",
         extra={"retriever": settings.retriever, "llm_provider": settings.llm_provider,
                "embed_model": settings.embed_model, "top_k": settings.top_k,
-               "cache": settings.cache},
+               "cache": settings.cache, "collection": settings.collection,
+               "trace_dir": settings.trace_dir or "stdout only",
+               "guardrail_injection_action": settings.guardrail_injection_action},
     )
     yield
 
@@ -63,11 +67,21 @@ def _check_pin_at_startup(app: FastAPI) -> None:
         pin = getattr(state.retriever, "pin", lambda: None)()
         if pin is not None and pin.get("embed_model") == state.settings.embed_model:
             state.embedder.embed("embedding pin probe")      # learn this model's dimension
+            _digest(state.embedder)                           # the trace's embedding version
     except Exception as exc:  # Chroma or Ollama still booting: /readyz checks again
         log.warning("embedding pin not checked at startup", extra={"error": type(exc).__name__})
         return
     state.pin_conflict = pin_report(pin_conflict(pin, state.settings, state.embedder.dimension),
                                     None)
+
+
+def _digest(embedder: OllamaEmbedder) -> None:
+    """The embedding model's digest for the trace record; a failure only leaves the trace's
+    embedding version empty, never the pin check undone."""
+    try:
+        embedder.lookup_digest()
+    except Exception as exc:
+        log.warning("embedding model digest not found", extra={"error": type(exc).__name__})
 
 
 app = FastAPI(title="RAHBAR API", lifespan=lifespan)

@@ -1,0 +1,32 @@
+trace summary  since -  until -  (first 2026-11-28T10:47:53.618Z, last 2026-11-28T11:11:34.015Z)
+queries 369   outcomes {"abstained": 139, "answered": 77, "cached": 19, "declined": 86, "fallback": 48}
+abstention rate 0.377   decline rate 0.233   fallback rate 0.130
+cache hit rate 0.186  (hit 19, miss 83, skipped 267)
+injection attempts flagged 34 {"chunk": 9, "question": 25} in 28 queries
+collection / embedding model: {"rahbar-k6 / nomic-embed-text": 173, "rahbar / nomic-embed-text": 107, "rahbar-minilm / all-minilm": 89}
+
+top-1 similarity  n 350  min 0.353  p25 0.603  p50 0.703  p75 0.745  max 0.866  mean 0.672
+  0.00-0.30     0  
+  0.30-0.40     6  ##
+  0.40-0.50    24  ########
+  0.50-0.55     2  #
+  0.55-0.60    53  #################
+  0.60-0.65    54  ##################
+  0.65-0.70    35  ############
+  0.70-0.75    91  ##############################
+  0.75-0.80    58  ###################
+  0.80-0.85    21  #######
+  0.85-0.90     6  ##
+  0.90-0.95     0  
+  0.95-1.00     0  
+
+| stage | n | p50 ms | p95 ms |
+| --- | --- | --- | --- |
+| cache | 102 | 10.300 | 33.200 |
+| embed | 350 | 7.200 | 17.500 |
+| retrieve | 350 | 4.800 | 6.100 |
+| generate | 211 | 1904.100 | 16515.000 |
+| summary | 369 | 0.000 | 0.000 |
+| total | 369 | 21.500 | 13881.900 |
+
+written to eval/results/f/15-trace-summary-all.json

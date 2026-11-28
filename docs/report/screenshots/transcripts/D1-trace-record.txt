@@ -1,0 +1,162 @@
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ ID=$(curl -s -X POST "http://$(minikube ip)/api/ask" -H "Host: rahbar.local" -H "Content-Type: application/json" -d '{"question": "What did the 2023 rules say about attendance?"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["request_id"])'); echo "trace id: $ID"
+trace id: 2cbae88883be2c411b12bd78f8c6ee79
+mth@MTH-PC:~/Projects/SCD_assignment/Rahbar-RAG-K8s$ kubectl logs -n rahbar -l app=api --tail=-1 | grep "\"trace_id\": \"$ID\"" | python3 -m json.tool
+{
+    "ts": "2026-11-28T12:04:53Z",
+    "level": "INFO",
+    "logger": "rahbar.trace",
+    "msg": "trace",
+    "request_id": "2cbae88883be2c411b12bd78f8c6ee79",
+    "trace_id": "2cbae88883be2c411b12bd78f8c6ee79",
+    "timestamp": "2026-11-28T12:04:52.400Z",
+    "pod": "api-67b7d66d9d-m84tn",
+    "query": "What did the 2023 rules say about attendance?",
+    "rewritten_query": null,
+    "follow_up": false,
+    "embedding": {
+        "model": "nomic-embed-text",
+        "version": "0a109f422b47",
+        "dimension": 768
+    },
+    "collection": "rahbar-k6",
+    "retrieval": {
+        "retriever": "chroma",
+        "top_k": 6,
+        "filters": {
+            "metadata": null,
+            "include_superseded": true,
+            "relevance_floor": 0.65
+        },
+        "chunks": [
+            {
+                "rank": 1,
+                "chunk_id": "undergraduate-academic-rules-aug-2023.pdf#0009",
+                "doc_id": "academic-rules",
+                "doc_version": "2023-08",
+                "superseded": true,
+                "content_hash": "a75d9f66e9ad2452",
+                "source": "undergraduate-academic-rules-aug-2023.pdf",
+                "section": "Attendance Requirements",
+                "page": 7,
+                "score": 0.6678,
+                "above_floor": true
+            },
+            {
+                "rank": 2,
+                "chunk_id": "academic-rules-handbook-jun-2026.pdf#0014",
+                "doc_id": "academic-rules",
+                "doc_version": "2026-06",
+                "superseded": false,
+                "content_hash": "cedb86e508bd59b0",
+                "source": "academic-rules-handbook-jun-2026.pdf",
+                "section": "Attendance Requirements",
+                "page": 10,
+                "score": 0.6678,
+                "above_floor": true
+            },
+            {
+                "rank": 3,
+                "chunk_id": "undergraduate-academic-rules-aug-2023.pdf#0000",
+                "doc_id": "academic-rules",
+                "doc_version": "2023-08",
+                "superseded": true,
+                "content_hash": "5fa329085da457b5",
+                "source": "undergraduate-academic-rules-aug-2023.pdf",
+                "section": "REGULATIONS",
+                "page": 1,
+                "score": 0.6272,
+                "above_floor": false
+            },
+            {
+                "rank": 4,
+                "chunk_id": "annual-report-2023-24.pdf#0330",
+                "doc_id": "annual-report-2023-24",
+                "doc_version": "2023-24",
+                "superseded": false,
+                "content_hash": "b1f1cb3fdda79de2",
+                "source": "annual-report-2023-24.pdf",
+                "section": "2. Alumni Homecoming Event",
+                "page": 79,
+                "score": 0.6079,
+                "above_floor": false
+            },
+            {
+                "rank": 5,
+                "chunk_id": "prospectus-2026-academic-rules-and-regulations.pdf#0002",
+                "doc_id": "prospectus-2026-academic-rules-and-regulations",
+                "doc_version": "2026",
+                "superseded": false,
+                "content_hash": "4c23e20d303c98b3",
+                "source": "prospectus-2026-academic-rules-and-regulations.pdf",
+                "section": "Academic Rules and Regulations",
+                "page": 1,
+                "score": 0.6073,
+                "above_floor": false
+            },
+            {
+                "rank": 6,
+                "chunk_id": "annual-report-2023-24.pdf#0215",
+                "doc_id": "annual-report-2023-24",
+                "doc_version": "2023-24",
+                "superseded": false,
+                "content_hash": "0143c233a6f2cf87",
+                "source": "annual-report-2023-24.pdf",
+                "section": "Farewell 2023",
+                "page": 53,
+                "score": 0.598,
+                "above_floor": false
+            }
+        ],
+        "reranker": "none",
+        "reranked_order": [
+            "undergraduate-academic-rules-aug-2023.pdf#0009",
+            "academic-rules-handbook-jun-2026.pdf#0014"
+        ]
+    },
+    "generation": {
+        "provider": "ollama",
+        "model": "llama3.2:3b",
+        "parameters": {
+            "temperature": 0.2,
+            "seed": 42,
+            "output": "Answer JSON schema"
+        },
+        "prompt_hash": "87a8210f83367e758a22fc730a204d4e71f577a5bd41d80b369cbd1f79a1bdda",
+        "attempts": 1,
+        "fallback": false,
+        "tokens_in": 646,
+        "tokens_out": 125
+    },
+    "response": {
+        "answer": "100% attendance is required, with a maximum of 20% absence condoned. [undergraduate-academic-rules-aug-2023.pdf / Attendance Requirements] [academic-rules-handbook-jun-2026.pdf / Attendance Requirements]",
+        "answered_from_context": true,
+        "confidence": "high",
+        "citations": [
+            {
+                "source": "undergraduate-academic-rules-aug-2023.pdf",
+                "section": "Attendance Requirements",
+                "page": 7
+            },
+            {
+                "source": "academic-rules-handbook-jun-2026.pdf",
+                "section": "Attendance Requirements",
+                "page": 10
+            }
+        ],
+        "cached": false
+    },
+    "outcome": "answered",
+    "guardrails": [],
+    "cache": {
+        "lookup": "skipped",
+        "similarity": null,
+        "stored": false
+    },
+    "latency_ms": {
+        "embed": 0.0,
+        "retrieve": 3.3,
+        "generate": 1061.3,
+        "summary": 0.0,
+        "total": 1065.0
+    }
+}

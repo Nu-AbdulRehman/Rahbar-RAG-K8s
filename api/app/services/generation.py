@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 from pydantic import ValidationError
 
@@ -43,6 +43,8 @@ class Generated:
     attempts: int
     tokens_in: int = 0
     tokens_out: int = 0
+    # What the output checks did, for the trace's guardrails list (RAGOps D4).
+    guardrails: list[dict] = field(default_factory=list)
 
 
 def check_citations(answer: Answer, retrieved: list[Passage]) -> Answer:
@@ -86,6 +88,12 @@ def check_markers(answer: Answer, retrieved: list[Passage]) -> Answer:
     return answer.model_copy(update={"answer": text})
 
 
+def invalid_markers(answer: Answer, retrieved: list[Passage]) -> int:
+    """Inline markers that name nothing retrieved: check_markers removes these."""
+    allowed = {(p.source, p.section) for p in retrieved}
+    return sum((m[1].strip(), m[2].strip()) not in allowed for m in MARKER.finditer(answer.answer))
+
+
 MIN_ATTEMPT_SECONDS = 1.0   # less time than this left: do not start another model call
 
 
@@ -98,30 +106,49 @@ def generate(provider: LLMProvider, prompt: Prompt, retrieved: list[Passage],
     """`deadline` is a time.monotonic() value: each attempt gets only the time left, and
     the retry is skipped when too little remains (Settings.request_budget)."""
     tokens_in = tokens_out = 0
+    events: list[dict] = []
     for attempt in (1, 2):                      # the first try and exactly one retry
         left = remaining(deadline)
         if left is not None and left < MIN_ATTEMPT_SECONDS:
             log.warning("request budget exhausted", extra={"attempt": attempt})
+            events.append({"name": "request_budget", "action": "no further attempt",
+                           "attempt": attempt})
             break
         try:
             completion = provider.complete(prompt if left is None
                                            else replace(prompt, timeout=left))
             tokens_in += completion.tokens_in
             tokens_out += completion.tokens_out
-            answer = check_citations(Answer.model_validate_json(completion.text), retrieved)
+            raw = Answer.model_validate_json(completion.text)
+            answer = check_citations(raw, retrieved)
+            if len(answer.citations) < len(raw.citations):
+                events.append({"name": "citation_check", "action": "dropped citations",
+                               "count": len(raw.citations) - len(answer.citations),
+                               "attempt": attempt})
             if answer.answered_from_context and not answer.citations:
                 raise ValueError("a claim-bearing answer has no valid citation")
             if not answer.answered_from_context:
                 # The model says the evidence does not answer it. Its text is uncited by
                 # definition, so the user sees the standard decline, never the model's guess.
+                events.append({"name": "decline", "action": "replaced the model's text with "
+                               "the standard decline", "attempt": attempt})
                 answer = DECLINED
             else:
+                bad = invalid_markers(answer, retrieved)
+                if bad:
+                    events.append({"name": "marker_check", "action": "removed inline markers",
+                                   "count": bad, "attempt": attempt})
                 answer = check_markers(answer, retrieved)
-            return Generated(answer, False, attempt, tokens_in, tokens_out)
+            return Generated(answer, False, attempt, tokens_in, tokens_out, events)
         except (ValidationError, ValueError) as exc:
             log.warning("invalid model output", extra={"attempt": attempt,
                                                        "error": type(exc).__name__})
+            events.append({"name": "output_validation", "action": "rejected the reply",
+                           "error": type(exc).__name__, "attempt": attempt})
         except Exception as exc:  # timeout, connection refused, HTTP 5xx: never a 500
             log.warning("provider call failed", extra={"attempt": attempt,
                                                        "error": type(exc).__name__})
-    return Generated(FALLBACK, True, 2, tokens_in, tokens_out)
+            events.append({"name": "provider", "action": "call failed",
+                           "error": type(exc).__name__, "attempt": attempt})
+    events.append({"name": "fallback", "action": "returned the canned answer"})
+    return Generated(FALLBACK, True, 2, tokens_in, tokens_out, events)

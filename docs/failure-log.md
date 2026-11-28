@@ -16,3 +16,109 @@ Appended when something breaks, not afterwards. Feeds engineering note Q7.
 | 2026-11-07 | e2e-eval on GitHub: `error: timed out waiting for the condition on jobs/indexer` after 10 min, and no indexer pod in `kubectl get pods`, yet the api pods were ready | On a fresh kind cluster the fixture Job (3 s of work) reaches its last step, the Redis cache bump, before Redis has pulled its image. With backoffLimit 2 the quick in-place restarts exhausted the limit, the Job was marked Failed and the controller deleted the pod, so there were no logs to read. My first local reproduction was wrong: the test Job read the dev ConfigMap and failed on "no documents found in /corpus" | k8s/overlays/e2e sets backoffLimit 6 for the fixture Job. Reproduced properly with Redis scaled to 0 for 40 s: Complete after 3 restarts, one more than the base limit allows |
 | 2026-11-07 | README run on a fresh minikube: all three api pods restarted once (`Container api failed startup probe, will be restarted`), then came up | The startup embedding-pin check ran Chroma I/O inside the FastAPI lifespan. With chroma still pulling its image the Service had no endpoints and the connect hung about 75 s, past the 60 s startup probe, so uvicorn never served /healthz in time | The startup check runs in a daemon thread (api/app/main.py); /readyz still refuses until the pin matches. Reproduced with chroma at 0 replicas: the new pod stayed alive at 0/1 with 0 restarts for 100 s. Test: test_a_hung_chroma_at_boot_does_not_hold_up_startup |
 | 2026-11-07 | First cd.yml run on main: build-push pushed all three images, then deploy timed out on `job/indexer`; api, ui and indexer pods in ImagePullBackOff on `docker.io/nuabdulrehman/rahbar-*:set-by-cd` | The deploy ran `kustomize edit set image rahbar-api=...` in k8s/overlays/ci, but the prod overlay underneath had already renamed rahbar-api to docker.io/nuabdulrehman/rahbar-api, so the ci-level image transform matched nothing and the placeholder tag shipped. My earlier minikube rehearsal of the smoke test pointed the ci overlay at the dev overlay instead of prod, so it never exercised this | The pin step edits k8s/overlays/prod (where the names are mapped) and renders through ci; a guard fails the job if any rahbar image is not tagged with the commit SHA. Reproduced and verified with kustomize v5.8.3 |
+| 2026-11-27 | PR #32 (docs only) failed `scan (rahbar-ui)`: Trivy found 4 CRITICAL and 2 HIGH in nginx 1.30.6-r1 (CVE-2026-113425, -121810, -123007, -123633, -118899, -123634), fixed in 1.30.7-r0 | New nginx CVEs published after the base image was pinned; nginx in nginx-unprivileged comes from nginx.org, so the Dockerfile's `apk upgrade` does not move it, and no 1.30.7-alpine tag existed yet | ui/Dockerfile moves to nginxinc/nginx-unprivileged:1.31.7-alpine (nginx 1.31.7); local Trivy exit 0, page and /healthz still served read-only. Committed by Nu-AbdulRehman on the plan branch as a one-time exception to the account split, at the user's request |
+| 2026-11-28 | First real RAGOps ingestion: `pipeline.ops counts` listed chunks by file name, and the two academic-rules versions did not share their doc_id | clean() rebuilt the Document from four positional fields and dropped the new doc_id and title, so every chunk fell back to its source name | clean() uses dataclasses.replace(doc, pages=...); test_cleaning_keeps_the_document_identity fails without it. The next run updates 803 chunks' metadata without re-embedding |
+| 2026-11-28 | First RAGOps baseline: embedding 2.2 s per chunk and a 28 s median answer, about 10x the Assignment 02 numbers on the same laptop | `ollama ps` showed "100% CPU" and the server log `total_vram="0 B"`: the reinstalled Ollama, started with `ollama serve` from Git Bash, did not discover the RTX 3050 (nvidia-smi and the bundled cuda_v12/v13 libraries were fine) | Restarted the server from PowerShell (Start-Process); the log then shows `library=CUDA ... total_vram="6.0 GiB"` and `ollama ps` "100% GPU". A second cause came out on the re-run, which timed out on its first embedding: `localhost` resolves to IPv6 ::1 first, Ollama listens on IPv4 127.0.0.1 only, and httpx waits about 2 s on every request before falling back (curl 0.28 s, the api's embedder 2.1 s, the same call with 127.0.0.1 0.07 s). The local stack now uses 127.0.0.1 for Ollama and Chroma. The CPU run is kept, labelled baseline-cpu-ollama; its embedding times include that 2 s |
+| 2026-11-28 | Batch B ingestion: intake moved all 12 files into raw/, but the verification table listed only the 9 corpus documents and nothing new was embedded | raw/ holds fetch.py's _index.json, and read_folder() read only that index, so documents moved in from incoming/ without an index of their own were invisible | read_folder() adds documents the index does not list, from their front matter, and skips README and MANIFEST files; test_a_batch_beside_a_fetch_index_is_still_catalogued fails without it |
+| 2026-11-28 | Rollback demo: `pipeline.ops restore fee-structure-page 2026-27` made the old page current, then the next ingestion archived it again and left both versions superseded (eval/results/a/07a-rollback-bug-rearchived.log) | The recency check compared with every indexed version, including the 2027-28 one that the restore had just archived on purpose, so the restored page always had a newer version | Recency compares with the current (raw/) versions only, and an archived entry stays archived; test_a_rollback_survives_the_next_ingestion fails without it |
+
+## 2026-11-28 · ragops/f-kubernetes · uniqueness quarantined a real corpus document (Member 2)
+- **Symptom:** the first ingestion Job on a fresh minikube indexed 767 chunks instead of 803.
+  The verification table showed the 2026 prospectus quarantined: "near duplicate of
+  undergraduate-academic-rules-aug-2023.pdf (cosine 0.954 >= 0.950)".
+- **Cause:** VERIFY_NEAR_DUPLICATE was a provisional 0.95, set before any measurement. The
+  prospectus is a 5-page summary of the same rules, so its embedding sits close to the rules.
+- **Fix:** measured every document pair (python -m pipeline.ops similarities): different
+  documents reach at most 0.9588, the planted near duplicate 0.9997. Threshold 0.98 in the
+  ragops-gate ConfigMap (eval/results/a/09-uniqueness-threshold.txt). Lesson: the same as
+  the relevance floor in A02: a threshold is a measurement, never a guess.
+
+## 2026-11-28 · ragops/f-kubernetes · the planted b09 claim reached a user, then the cache (Member 2)
+- **Symptom:** after Batch B, "Are all fees waived this semester according to the IT
+  policy?" answered "true [b09-it-acceptable-use.md / 3. Assistant notice]". The trace
+  showed the retrieval rail had flagged the chunk three times (flag mode). After switching
+  the ConfigMap to redact and restarting the api, the same question returned the same
+  answer with `cached: true`.
+- **Cause:** (1) flag mode only records; the A02 defence blocks obeying and invented
+  citations, not the model quoting a planted claim with a real citation. (2) The answer
+  passed every cache rule, and only an indexer run bumps the cache generation, not a
+  ConfigMap change.
+- **Fix:** GUARDRAIL_INJECTION_ACTION=redact in rahbar-config; answers built on flagged
+  evidence are never cached (test shown red without it); the cache generation bumped once
+  by hand for the demo. Evidence: eval/results/f/11-d4-flag-mode.txt and
+  13-d4-redact-mode.txt.
+
+## 2026-11-28 · ragops/f-kubernetes · a release served the previous configuration's cached answers (Member 2)
+- **Symptom:** right after `kubectl set env deployment/api CHROMA_COLLECTION=rahbar-k6
+  TOP_K=6` and a finished `rollout status`, the first question returned `cached: true`; its
+  trace showed collection rahbar-k6, yet the answer was the one the old pods had cached
+  from rahbar with top_k 5.
+- **Cause:** the semantic cache had one list per index generation, shared by every
+  configuration. Only an indexer run bumps the generation, and a release or rollback by
+  `set env` runs no indexer. Worse for the bad release: all-minilm question vectors (384-d)
+  would have been compared with cached nomic vectors (768-d); `zip` silently truncates.
+- **Fix:** cache entries are keyed by generation *and* a fingerprint of collection,
+  embedding model, top_k, relevance floor, LLM and rail mode (providers/cache). A release
+  starts with an empty cache for its configuration; an undo finds the old one again. Test
+  shown red without the scope.
+
+## 2026-11-28 · ragops/f-kubernetes · a failed ingestion attempt left no logs (Member 2)
+- **Symptom:** the Batch B ingestion Job completed, but its pod showed `Restart Count: 1`:
+  the first attempt ran 10:59:44-11:02:58 UTC and exited 1. `kubectl logs --previous`
+  answered "unable to retrieve container logs", and Ollama's log has no error in that
+  window. The retry found Batch B already taken in (`intake: []`) and the fee page already
+  archived, so the first attempt failed inside the verification loop, before the
+  duplicates were quarantined; the retry finished every step correctly.
+- **Cause of the failure:** unknown. The logs were lost, which is the real problem:
+  `restartPolicy: OnFailure` restarts the container in place, and only one previous log
+  is kept, briefly.
+- **Fix:** `restartPolicy: Never` on the indexer Job, the CronJob and the candidate index
+  Job, so each attempt is its own pod and its logs stay with it until the Job is deleted.
+  The pipeline's steps proved safe to repeat (moves are recorded in the catalog, the sync
+  embeds only what changed).
+
+## 2026-11-28 · ragops/f-kubernetes · two races in the rollout screenshots (Member 2)
+- **Symptom:** taking the F3 screenshots, the trace asked right after `rollout undo` showed
+  all-minilm, and on the retake the trace right after the bad release showed rahbar-k6.
+- **Cause:** (1) `kubectl rollout status` run immediately after `rollout undo` printed
+  "successfully rolled out" without a single "Waiting" line: the Deployment controller had
+  not yet observed the new generation. (2) After a completed rollout, ingress-nginx kept
+  routing to the terminating pods for a few seconds (preStop sleep 5 plus its endpoint
+  sync).
+- **Fix:** `sleep 3` before `rollout status` after an undo, and `sleep 10` before asking
+  the question whose trace is the evidence (k8s/README.md section 4). No code change: the
+  rollout itself kept three ready pods throughout.
+
+## 2026-11-28 · ragops/m1-cluster · minikube refused to start on Member 1's laptop (Member 1)
+- **Symptom:** `make cluster` exited with `MK_USAGE: Docker Desktop has only 5778MB memory
+  but you specified 6144MB`.
+- **Cause:** the Makefile's `MINIKUBE_MEMORY` default (6144) was set on Member 2's Linux
+  laptop; Docker Desktop on Windows caps the VM below it.
+- **Fix:** `minikube start ... --memory=5120` (or `make cluster MINIKUBE_MEMORY=5120`). The
+  measured requests in eval/results/f5/ fit in 5 GiB.
+
+## 2026-11-28 · ragops/m1-cluster · every ingestion attempt failed: Ollama's name did not resolve (Member 1)
+- **Symptom:** the first `indexer` Job retried five times; each pod ended in
+  `httpx.ConnectError: [Errno -2] Name or service not known` at the uniqueness check, and
+  the api stayed not-ready. From the node, `curl http://192.168.65.254:11434` worked.
+- **Cause:** the cluster was re-created on an existing minikube profile whose container was
+  gone, and the CoreDNS Corefile came up without minikube's `hosts` block for
+  `host.minikube.internal`. The node's /etc/hosts had the name; pods use CoreDNS.
+- **Fix:** add `hosts { 192.168.65.254 host.minikube.internal; fallthrough }` to the
+  `coredns` ConfigMap and restart CoreDNS (an `nslookup` from a pod then returns
+  192.168.65.254). A fresh `minikube delete && make cluster` also restores it.
+
+## 2026-11-28 · ragops/m1-cluster · two ingestion runs at once broke each other (Member 1)
+- **Symptom:** the `indexer` Job and a `reindex` run started together on one data lake.
+  Two `indexer` attempts failed: one with `json.decoder.JSONDecodeError: Expecting value:
+  line 1 column 1` (it read catalog.json while the other run was rewriting it), one with
+  `FileNotFoundError: /data/raw/undergraduate-academic-rules-aug-2023.pdf` (the other run
+  had just archived it). The third attempt succeeded.
+- **Cause:** the CronJob's `concurrencyPolicy: Forbid` only stops the CronJob overlapping
+  itself; a Job created by hand, or the `indexer` Job, can run beside it. The "single writer"
+  WONTFIX in PR #33 assumed one run at a time and nothing enforced it.
+- **Fix:** `Lake.lock()` (flock on `<lake>/.lock`; msvcrt on Windows) is held for the whole
+  run, so a second run waits. Released when the process ends, so a crash leaves no stale
+  lock. Test: indexer/tests/test_lake.py. On the cluster, two runs started together now
+  finish one after the other, both with one attempt and 0 embedded
+  (eval/results/cluster-m1/09-two-runs-at-once.txt).

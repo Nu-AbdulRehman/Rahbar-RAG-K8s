@@ -98,6 +98,15 @@ def load_sources() -> list[dict]:
     return docs
 
 
+def catalog_fields(doc: dict, file: str) -> dict:
+    """What the indexer's verification stage reads per document (RAGOps A1): the
+    document id that versions share (for the recency check), its title, version and
+    superseded flag. doc_id defaults to the file name without its extension."""
+    return {"doc_id": doc.get("doc_id") or Path(file).stem, "title": doc["name"],
+            "doc_version": doc.get("doc_version", "unknown"),
+            "superseded": bool(doc.get("superseded", False))}
+
+
 def fetch(force: bool, raw: Path = RAW) -> int:
     docs = load_sources()
     raw.mkdir(parents=True, exist_ok=True)
@@ -112,8 +121,7 @@ def fetch(force: bool, raw: Path = RAW) -> int:
             old = previous.get(name)
             if old and not force and (raw / old["file"]).exists() and old["url"] == url:
                 print(f"  have    {old['file']}")
-                entries.append({**old, "doc_version": doc.get("doc_version", "unknown"),
-                                "superseded": bool(doc.get("superseded", False))})
+                entries.append({**old, **catalog_fields(doc, old["file"])})
                 continue
             print(f"  fetch   {name}")
             try:
@@ -131,8 +139,7 @@ def fetch(force: bool, raw: Path = RAW) -> int:
                     "sha256": hashlib.sha256(response.content).hexdigest(),
                     "content_type": content_type.split(";")[0],
                     "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-                    "doc_version": doc.get("doc_version", "unknown"),
-                    "superseded": bool(doc.get("superseded", False)),
+                    **catalog_fields(doc, file),
                 })
                 print(f"          {file}, {len(response.content):,} bytes")
             except Exception as exc:  # report every failure, keep going

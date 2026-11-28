@@ -5,12 +5,19 @@ CACHE_THRESHOLD with the new one. Entries live in one Redis list per cache gener
 the indexer bumps the generation as the last step of every run (indexer/pipeline/
 invalidate.py), so a re-index expires every entry at once without deleting anything.
 
+Entries are also scoped by the answer's configuration (scope(), RAGOps F3): the collection,
+embedding model, top_k, relevance floor, LLM and retrieval rail. A release or a rollback
+changes those with `kubectl set env`, which no indexer run follows, so without the scope
+the new pods would serve answers the old configuration produced, and an embedding-model
+change would compare vectors of two models (found on minikube, docs/failure-log.md).
+
 Every Redis error degrades to a miss: the cache can make answers faster, never fail them.
 """
 
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import math
@@ -20,7 +27,7 @@ from typing import Any, Protocol
 log = logging.getLogger("rahbar.cache")
 
 GENERATION_KEY = "rahbar:cache:generation"     # the same key the indexer increments
-ENTRIES_KEY = "rahbar:cache:entries:{generation}"
+ENTRIES_KEY = "rahbar:cache:entries:{generation}:{scope}"
 ENTRY_TTL_SECONDS = 7 * 24 * 3600              # old generations clean themselves up
 
 
@@ -38,6 +45,11 @@ def _unpack(data: str) -> array:
     return out
 
 
+def scope(*parts: object) -> str:
+    """A short, stable fingerprint of the settings an answer depends on."""
+    return hashlib.sha256("|".join(map(str, parts)).encode()).hexdigest()[:12]
+
+
 def cosine(a: Any, b: Any) -> float:
     dot = sum(x * y for x, y in zip(a, b))
     norm = math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))
@@ -48,14 +60,16 @@ class SemanticCache:
     enabled = True
 
     def __init__(self, client: Any, embedder: Embedder, threshold: float,
-                 max_entries: int) -> None:
+                 max_entries: int, scope: str = "default") -> None:
         self.client = client
         self.embedder = embedder
         self.threshold = threshold
         self.max_entries = max_entries
+        self.scope = scope
 
     def _key(self) -> str:
-        return ENTRIES_KEY.format(generation=int(self.client.get(GENERATION_KEY) or 0))
+        return ENTRIES_KEY.format(generation=int(self.client.get(GENERATION_KEY) or 0),
+                                  scope=self.scope)
 
     def lookup(self, question: str) -> tuple[dict | None, float]:
         """(the cached answer payload or None, best similarity seen). Errors are a miss."""

@@ -1,56 +1,80 @@
-"""The whole run on the fixture corpus with fakes for Ollama, Chroma and Redis (§3.1, §3.3):
-every stage runs, and the cache is invalidated last."""
+"""The whole run on a copy of the fixture corpus with fakes for Ollama, Chroma and Redis
+(§3.1, §3.3, RAGOps A1): verify, chunk, sync, and invalidate the cache last."""
 
 from __future__ import annotations
 
+import json
+import shutil
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from pipeline import run
+from pipeline.store import SyncResult
 
 FIXTURES = Path(__file__).resolve().parents[2] / "eval" / "fixtures"
 
 
-def test_full_run_stores_fixture_chunks_then_invalidates_the_cache(
-        monkeypatch: pytest.MonkeyPatch) -> None:
+def _copy_fixtures(tmp_path: Path) -> Path:
+    raw = tmp_path / "raw"
+    shutil.copytree(FIXTURES, raw)          # never run the pipeline on the repo's own files
+    return raw
+
+
+def _fake_sync(events: list[str], stored: dict[str, Any]) -> Any:
+    def fake(chunks: list, settings: Any, embed_texts: Any, client: Any = None) -> SyncResult:
+        events.append("sync")
+        stored["chunks"] = chunks
+        return SyncResult(len(chunks), 0, 0, 0, len(chunks), False)
+    return fake
+
+
+def test_full_run_verifies_then_syncs_then_invalidates_the_cache(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_data_lake: Path) -> None:
     events: list[str] = []
     stored: dict[str, Any] = {}
-
-    def fake_embed(texts: list[str], settings: Any) -> list[list[float]]:
-        events.append("embed")
-        return [[1.0, 0.0]] * len(texts)
-
-    def fake_store(chunks: list, vectors: list, settings: Any) -> int:
-        events.append("store")
-        stored["chunks"] = chunks
-        return len(chunks)
-
-    def fake_invalidate(settings: Any) -> int:
-        events.append("invalidate")
-        return 7
-
-    monkeypatch.setenv("CORPUS_DIR", str(FIXTURES))
-    monkeypatch.setattr("pipeline.embed.embed", fake_embed)
-    monkeypatch.setattr("pipeline.store.store", fake_store)
-    monkeypatch.setattr(run, "invalidate_cache", fake_invalidate)
+    monkeypatch.setenv("CORPUS_DIR", str(_copy_fixtures(tmp_path)))
+    monkeypatch.setattr("pipeline.store.sync", _fake_sync(events, stored))
+    monkeypatch.setattr(run, "invalidate_cache", lambda s: events.append("invalidate") or 7)
     monkeypatch.setattr("sys.argv", ["pipeline.run"])
 
     assert run.main() == 0
-    assert events == ["embed", "store", "invalidate"]
-    sources = {c.source for c in stored["chunks"]}
-    assert sources == {"academic-rules-2023.md", "academic-rules-2026.md", "fees-2026.md"}
+    assert events == ["sync", "invalidate"]
+    by_source = {}
+    for c in stored["chunks"]:
+        by_source.setdefault(c.source, set()).add(c.superseded)
+    assert set(by_source) == {"academic-rules-2023.md", "academic-rules-2026.md", "fees-2026.md"}
+    assert by_source["academic-rules-2023.md"] == {True}    # the older version, still indexed
+
+    reports = list((isolated_data_lake / "reports").glob("verify-*.json"))
+    assert len(reports) == 1
+    actions = {d["file"]: d["action"] for d in json.loads(reports[0].read_text())["documents"]}
+    assert actions == {"academic-rules-2023.md": "archive", "academic-rules-2026.md": "index",
+                       "fees-2026.md": "index"}
+    assert (isolated_data_lake / "archive" / "academic-rules" / "2023"
+            / "academic-rules-2023.md").exists()
 
 
-def test_a_document_with_no_chunks_fails_the_run(tmp_path: Path,
-                                                 monkeypatch: pytest.MonkeyPatch) -> None:
-    (tmp_path / "rules.md").write_text("# 1. Rules\nStudents attend.", encoding="utf-8")
-    (tmp_path / "blank.md").write_text("", encoding="utf-8")       # e.g. a scan without OCR
-    monkeypatch.setenv("CORPUS_DIR", str(tmp_path))
+def test_an_empty_document_is_quarantined_and_the_rest_indexed(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_data_lake: Path) -> None:
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    (raw / "rules.md").write_text("---\ndoc_version: 2026\n---\n# 1. Rules\n"
+                                  + "Students attend every lecture. " * 10, encoding="utf-8")
+    (raw / "blank.md").write_text("", encoding="utf-8")       # e.g. a scan without OCR
+    stored: dict[str, Any] = {}
+    monkeypatch.setenv("CORPUS_DIR", str(raw))
+    monkeypatch.setattr("pipeline.store.sync", _fake_sync([], stored))
+    monkeypatch.setattr(run, "invalidate_cache", lambda s: 1)
     monkeypatch.setattr("sys.argv", ["pipeline.run"])
-    with pytest.raises(SystemExit, match="blank.md produced no chunks"):
-        run.main()
+
+    assert run.main() == 0
+    assert {c.source for c in stored["chunks"]} == {"rules.md"}
+    assert (isolated_data_lake / "quarantine" / "blank.md").exists()
+    assert not (raw / "blank.md").exists()                     # moved, not copied
+    reason = json.loads((isolated_data_lake / "quarantine" / "blank.md.reason.json").read_text())
+    assert any("words extracted" in r for r in reason["reasons"])
 
 
 def test_a_redis_failure_fails_the_run(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -81,3 +105,67 @@ def test_invalidate_bumps_the_shared_generation_key() -> None:
     assert invalidate_cache(get_settings(), fake) == 1
     assert invalidate_cache(get_settings(), fake) == 2
     assert GENERATION_KEY == "rahbar:cache:generation"
+
+
+def test_a_rollback_survives_the_next_ingestion(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_data_lake: Path) -> None:
+    """Restoring an older version archives the newer one; the next run must keep the
+    restored version current, not re-archive it because a newer version exists."""
+    from pipeline.config import get_settings
+    from pipeline.lake import Lake
+
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    body = "Tuition is charged per credit hour for every course a student takes. " * 4
+    for name, version in (("fees-2026.md", "2026"), ("fees-2027.md", "2027")):
+        (raw / name).write_text(f"---\ndoc_id: fees\ndoc_version: {version}\n---\n"
+                                f"# Fees {version}\n{body}\n", encoding="utf-8")
+    stored: dict[str, Any] = {}
+    monkeypatch.setenv("CORPUS_DIR", str(raw))
+    monkeypatch.setattr("pipeline.store.sync", _fake_sync([], stored))
+    monkeypatch.setattr(run, "invalidate_cache", lambda s: 1)
+    monkeypatch.setattr("sys.argv", ["pipeline.run"])
+
+    assert run.main() == 0                           # 2026 archived, 2027 current
+    Lake(get_settings().data_lake_dir, str(raw)).restore("fees", "2026")
+    assert run.main() == 0
+    superseded = {c.source: c.superseded for c in stored["chunks"]}
+    assert superseded == {"fees-2026.md": False, "fees-2027.md": True}
+
+
+def test_batch_b_duplicates_are_quarantined_and_the_originals_indexed(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_data_lake: Path) -> None:
+    """Batch B's b01-b05 (corpus/batch_b/README.md): b02 and b04 are byte copies of b01
+    and b03, b05 is b03 with a few words changed under another doc_id."""
+    batch = Path(__file__).resolve().parents[2] / "corpus" / "batch_b"
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    for name in ("b01-library-rules.md", "b02-library-rules-copy.md", "b03-exam-conduct.md",
+                 "b04-exam-conduct-copy.md", "b05-exam-conduct-revised-wording.md",
+                 "b10-sports-facilities.md"):
+        shutil.copy(batch / name, raw / name)
+    stored: dict[str, Any] = {}
+    monkeypatch.setenv("CORPUS_DIR", str(raw))
+    monkeypatch.setenv("VERIFY_NEAR_DUPLICATE", "0.9")
+    monkeypatch.setattr("pipeline.store.sync", _fake_sync([], stored))
+    monkeypatch.setattr(run, "invalidate_cache", lambda s: 1)
+    monkeypatch.setattr("sys.argv", ["pipeline.run"])
+
+    assert run.main() == 0
+    report = json.loads(next((isolated_data_lake / "reports").glob("verify-*.json")).read_text())
+    assert report["near_duplicate_threshold"] == 0.9
+    actions = {d["file"]: d["action"] for d in report["documents"]}
+    assert actions == {"b01-library-rules.md": "index", "b02-library-rules-copy.md": "quarantine",
+                       "b03-exam-conduct.md": "index", "b04-exam-conduct-copy.md": "quarantine",
+                       "b05-exam-conduct-revised-wording.md": "quarantine",
+                       "b10-sports-facilities.md": "index"}
+    reasons = {d["file"]: {c["check"]: c["reason"] for c in d["checks"]}
+               for d in report["documents"]}
+    assert "exact duplicate of b01-library-rules.md" in \
+        reasons["b02-library-rules-copy.md"]["uniqueness"]
+    assert "near duplicate of b03-exam-conduct.md" in \
+        reasons["b05-exam-conduct-revised-wording.md"]["uniqueness"]
+    assert {c.source for c in stored["chunks"]} == {
+        "b01-library-rules.md", "b03-exam-conduct.md", "b10-sports-facilities.md"}
+    assert (isolated_data_lake / "quarantine" / "b02-library-rules-copy.md").exists()
+    assert (isolated_data_lake / "signatures.json").exists()

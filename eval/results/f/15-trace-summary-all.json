@@ -1,0 +1,94 @@
+{
+  "window": {
+    "since": null,
+    "until": null,
+    "first": "2026-11-28T10:47:53.618Z",
+    "last": "2026-11-28T11:11:34.015Z"
+  },
+  "queries": 369,
+  "outcomes": {
+    "abstained": 139,
+    "answered": 77,
+    "cached": 19,
+    "declined": 86,
+    "fallback": 48
+  },
+  "abstention_rate": 0.3767,
+  "decline_rate": 0.2331,
+  "fallback_rate": 0.1301,
+  "cache": {
+    "hit": 19,
+    "miss": 83,
+    "skipped": 267,
+    "hit_rate": 0.1863
+  },
+  "top1_similarity": {
+    "n": 350,
+    "min": 0.3527,
+    "p25": 0.6025,
+    "p50": 0.7028,
+    "p75": 0.7449,
+    "max": 0.8662,
+    "mean": 0.6723,
+    "histogram": {
+      "0.00-0.30": 0,
+      "0.30-0.40": 6,
+      "0.40-0.50": 24,
+      "0.50-0.55": 2,
+      "0.55-0.60": 53,
+      "0.60-0.65": 54,
+      "0.65-0.70": 35,
+      "0.70-0.75": 91,
+      "0.75-0.80": 58,
+      "0.80-0.85": 21,
+      "0.85-0.90": 6,
+      "0.90-0.95": 0,
+      "0.95-1.00": 0
+    }
+  },
+  "latency_ms": {
+    "cache": {
+      "n": 102,
+      "p50": 10.3,
+      "p95": 33.2
+    },
+    "embed": {
+      "n": 350,
+      "p50": 7.2,
+      "p95": 17.5
+    },
+    "retrieve": {
+      "n": 350,
+      "p50": 4.8,
+      "p95": 6.1
+    },
+    "generate": {
+      "n": 211,
+      "p50": 1904.1,
+      "p95": 16515.0
+    },
+    "summary": {
+      "n": 369,
+      "p50": 0.0,
+      "p95": 0.0
+    },
+    "total": {
+      "n": 369,
+      "p50": 21.5,
+      "p95": 13881.9
+    }
+  },
+  "injections_flagged": {
+    "total": 34,
+    "by_source": {
+      "chunk": 9,
+      "question": 25
+    },
+    "queries_with_a_flag": 28
+  },
+  "by_collection": {
+    "rahbar-k6 / nomic-embed-text": 173,
+    "rahbar / nomic-embed-text": 107,
+    "rahbar-minilm / all-minilm": 89
+  }
+}

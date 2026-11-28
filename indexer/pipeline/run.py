@@ -13,10 +13,12 @@ import argparse
 import json
 import sys
 import time
+from dataclasses import asdict, replace
 from pathlib import Path
 
 from .config import IndexerSettings, get_settings
 from .invalidate import invalidate_cache
+from .lake import Lake
 from .models import Chunk
 
 
@@ -64,34 +66,111 @@ def discover(corpus_dir: str) -> list[tuple[Path, str, bool]]:
 
 
 def run_pipeline(settings: IndexerSettings) -> int:
+    """Ingest, verify, update the data lake, update the retrieval source (RAGOps A1, A2;
+    paper Figure 3). Returns the number of chunks in the collection afterwards."""
+    lake = Lake(settings.data_lake_dir, settings.corpus_dir)
+    held = lake.lock()             # one run per lake at a time; released on return
+    try:
+        return _run(settings, lake)
+    finally:
+        held.close()
+
+
+def _run(settings: IndexerSettings, lake: Lake) -> int:
     from .chunk import chunk
     from .clean import clean
     from .embed import embed
     from .extract import extract
-    from .store import store
+    from .store import sync
+    from .verify import Check, Duplicates, completeness, decide, quality, recency, table
 
-    documents = discover(settings.corpus_dir)
-    if not documents:
+    run_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    taken = lake.intake()
+    changes = lake.refresh()
+    log("data lake", run=run_id, intake=taken, **changes)
+    entries = lake.current()
+    if not entries:
         raise SystemExit(f"no documents found in {settings.corpus_dir}")
+
+    # Recency compares with the current versions only: a newer version that was archived
+    # on purpose (a rollback with pipeline.ops restore) must not re-archive the restored one.
+    current = [e for e in entries if e.location == "raw"]
+    # Uniqueness embeds with VERIFY_EMBED_MODEL, never EMBED_MODEL: the near-duplicate
+    # threshold was measured for that model, and a candidate collection built with another
+    # embedding model (C1) must verify the same documents the same way.
+    verify_settings = replace(settings, embed_model=settings.verify_embed_model)
+    duplicates = Duplicates(settings.verify_near_duplicate,
+                            lambda texts: embed(texts, verify_settings),
+                            settings.verify_embed_model, lake.root / "signatures.json")
+    rows: list[dict] = []
     all_chunks: list[Chunk] = []
     original_words = 0
-    for path, doc_version, superseded in documents:
-        doc = clean(extract(str(path), doc_version, superseded, settings.ocr_dpi))
+    for entry in entries:
+        path = lake.path(entry)
+        try:
+            doc = extract(str(path), entry.doc_version, entry.superseded, settings.ocr_dpi)
+            doc.doc_id, doc.title, error = entry.doc_id, entry.title, None
+        except Exception as exc:  # a corrupt file is a verification result, not a crash
+            doc, error = None, f"{type(exc).__name__}: {exc}"
+        checks = [quality(doc, error, settings.verify_min_words, settings.verify_max_garbled),
+                  completeness(entry, path, doc), recency(entry, current)]
+        if decide(checks) == "quarantine":
+            # Already out: embedding a garbled or truncated text proves nothing.
+            original = None
+            checks.append(Check("uniqueness", None, "not run: failed an earlier check"))
+        else:
+            unique, original = duplicates.check(entry, doc)
+            checks.append(unique)
+        action = decide(checks)
+        if action != "quarantine":
+            duplicates.remember(original)
+        if action == "index" and entry.location == "archive":
+            action = "archive"            # rolled back or superseded earlier: stays archived
+        moved = None
+        if action == "quarantine":
+            moved = lake.quarantine(entry, [c.reason for c in checks if c.passed is False],
+                                    run_id)
+        elif action == "archive":
+            moved = lake.archive(entry)
+            entry.superseded = True
+        rows.append({"file": entry.file, "doc_id": entry.doc_id, "version": entry.doc_version,
+                     "checks": [c.row() for c in checks], "action": action, "file_move": moved})
+        if action == "quarantine" or doc is None:
+            continue
+        doc.superseded = entry.superseded
+        doc = clean(doc)
         pieces = chunk(doc, settings.chunk_size, settings.chunk_overlap)
         original_words += sum(len(p.text.split()) for p in doc.pages)
-        log("chunked", source=path.name, chunks=len(pieces),
+        log("chunked", source=entry.file, chunks=len(pieces), action=action,
             ocr_pages=sum(p.ocr for p in doc.pages))
         if not pieces:
-            # A listed document that yields nothing is a lost scan or a broken extract
+            # Verified, yet nothing to index: a broken extract that the checks missed
             # (FAILURE-ANALYSIS.md, stage A). Fail the Job instead of silently shrinking.
-            raise SystemExit(f"{path.name} produced no chunks; refusing to index without it")
+            raise SystemExit(f"{entry.file} produced no chunks; refusing to index without it")
         all_chunks.extend(pieces)
+
+    duplicates.save()
+    report = lake.write_report(f"verify-{run_id}.json", {
+        "run": run_id, "near_duplicate_threshold": settings.verify_near_duplicate,
+        "verify_embed_model": settings.verify_embed_model, "documents": rows})
+    print(table(rows), flush=True)
+    log("verification", report=str(report), indexed=sum(r["action"] != "quarantine" for r in rows),
+        quarantined=sum(r["action"] == "quarantine" for r in rows),
+        archived=sum(r["action"] == "archive" for r in rows),
+        uniqueness_texts_embedded=duplicates.embedded)
+    if not all_chunks:
+        raise SystemExit("every document failed verification; refusing to empty the index")
     stored_words = sum(len(c.text.split()) for c in all_chunks)
     log("chunking done", chunks=len(all_chunks), chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
         storage_amplification=round(stored_words / max(original_words, 1), 3))
-    vectors = embed([c.text for c in all_chunks], settings)
-    return store(all_chunks, vectors, settings)
+    result = sync(all_chunks, settings, lambda texts: embed(texts, settings))
+    lake.write_report(f"ingest-{run_id}.json", {
+        "run": run_id, "collection": settings.collection, "embed_model": settings.embed_model,
+        "chunk_size": settings.chunk_size, "chunk_overlap": settings.chunk_overlap,
+        "sync": asdict(result), "verification_report": report.name})
+    log("store", collection=settings.collection, **asdict(result))
+    return result.total
 
 
 def main() -> int:

@@ -1,0 +1,32 @@
+{"kind": "paraphrase", "a": "What CGPA puts a student on academic warning?", "b": "Below which cumulative GPA is a student placed on academic probation?"}
+{"kind": "paraphrase", "a": "How much attendance is required in each course?", "b": "What percentage of classes must a student attend?"}
+{"kind": "paraphrase", "a": "Can I get a refund if I withdraw from a course?", "b": "Is the fee returned when a course is dropped after registration?"}
+{"kind": "paraphrase", "a": "How many semesters can admission be frozen?", "b": "For how long may a student suspend their studies?"}
+{"kind": "paraphrase", "a": "What is the tuition fee per credit hour for BS?", "b": "How much does one credit hour cost in an undergraduate programme?"}
+{"kind": "paraphrase", "a": "How long is the summer semester?", "b": "What is the duration of the summer term?"}
+{"kind": "paraphrase", "a": "Is a retake exam allowed if I missed the final due to illness?", "b": "Can a sick student sit the final exam later?"}
+{"kind": "paraphrase", "a": "Can I use generative AI for my assignments?", "b": "Are students allowed to use ChatGPT in coursework?"}
+{"kind": "paraphrase", "a": "How can a student transfer to another campus?", "b": "What is the process for moving to a different campus of the university?"}
+{"kind": "paraphrase", "a": "What is the paper rechecking fee?", "b": "How much does it cost to have an exam re-marked?"}
+{"kind": "paraphrase", "a": "How many weeks of teaching are in a regular semester?", "b": "How long is a normal semester in weeks?"}
+{"kind": "paraphrase", "a": "What grade points does a B+ carry?", "b": "How many points is a B plus worth on the grading scale?"}
+{"kind": "paraphrase", "a": "What happens if a student is caught cheating in an exam?", "b": "What is the penalty for using unfair means during an examination?"}
+{"kind": "paraphrase", "a": "Is a course grade capped when it is repeated?", "b": "Does repeating a course limit the maximum grade I can get?"}
+{"kind": "paraphrase", "a": "What is the minimum CGPA needed to graduate?", "b": "What cumulative GPA must I have to earn my degree?"}
+{"kind": "paraphrase", "a": "Who approves a semester freeze?", "b": "Which office must sanction freezing a semester?"}
+{"kind": "unrelated", "a": "What CGPA puts a student on academic warning?", "b": "How do I reset my email password?"}
+{"kind": "unrelated", "a": "How much attendance is required in each course?", "b": "What is the capital of Australia?"}
+{"kind": "unrelated", "a": "Can I get a refund if I withdraw from a course?", "b": "Which football team won the league last season?"}
+{"kind": "unrelated", "a": "How many semesters can admission be frozen?", "b": "How do I bake sourdough bread at home?"}
+{"kind": "unrelated", "a": "What is the tuition fee per credit hour for BS?", "b": "What time does the sun set in winter?"}
+{"kind": "unrelated", "a": "How long is the summer semester?", "b": "How many legs does a spider have?"}
+{"kind": "unrelated", "a": "Is a retake exam allowed if I missed the final due to illness?", "b": "Which programming language is fastest for games?"}
+{"kind": "unrelated", "a": "Can I use generative AI for my assignments?", "b": "What is the best fertiliser for tomato plants?"}
+{"kind": "unrelated", "a": "How can a student transfer to another campus?", "b": "How far is the moon from the earth?"}
+{"kind": "unrelated", "a": "What is the paper rechecking fee?", "b": "Who painted the Mona Lisa?"}
+{"kind": "unrelated", "a": "How many weeks of teaching are in a regular semester?", "b": "How do I change a flat car tyre?"}
+{"kind": "unrelated", "a": "What grade points does a B+ carry?", "b": "What is the boiling point of water at sea level?"}
+{"kind": "unrelated", "a": "What happens if a student is caught cheating in an exam?", "b": "Which bird can fly backwards?"}
+{"kind": "unrelated", "a": "Is a course grade capped when it is repeated?", "b": "How do I knit a scarf for beginners?"}
+{"kind": "unrelated", "a": "What is the minimum CGPA needed to graduate?", "b": "What is the population of Tokyo?"}
+{"kind": "unrelated", "a": "Who approves a semester freeze?", "b": "What should I pack for a beach holiday?"}

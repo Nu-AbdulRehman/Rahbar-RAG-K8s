@@ -36,6 +36,20 @@ FOLLOWUPS = Counter("rahbar_followups_total", "Questions treated as follow-ups (
 CACHE_LOOKUPS = Counter("rahbar_cache_lookups_total", "Semantic cache lookups by result",
                         ["result"])          # hit | miss | skipped (follow-up)
 CACHE_STORES = Counter("rahbar_cache_stores_total", "Answers written to the semantic cache")
+# RAGOps D3. Labels stay bounded: a fixed stage list and two injection sources.
+STAGE_LATENCY = Histogram("rahbar_stage_seconds", "Time per query stage (p95 per stage in "
+                          "PromQL: histogram_quantile(0.95, sum by (le, stage) "
+                          "(rate(rahbar_stage_seconds_bucket[5m]))))", ["stage"],
+                          buckets=STAGE_BUCKETS)       # cache | embed | retrieve | generate | summary
+TOP1_SIMILARITY = Histogram("rahbar_top1_similarity",
+                            "Cosine similarity of the best retrieved chunk per query",
+                            buckets=(0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85,
+                                     0.9, 0.95, 1.0))
+INJECTIONS_FLAGGED = Counter("rahbar_injections_flagged_total",
+                             "Instruction-like text flagged by the retrieval rail",
+                             ["source"])               # chunk | question
+TRACE_WRITE_FAILURES = Counter("rahbar_trace_write_failures_total",
+                               "Trace records that could not be appended to TRACE_DIR")
 SUMMARY_FAILURES = Counter("rahbar_summary_failures_total",
                            "Conversation summary calls that failed; the old summary was kept")
 

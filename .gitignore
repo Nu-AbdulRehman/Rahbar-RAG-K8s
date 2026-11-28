@@ -24,3 +24,7 @@ venv/
 # Local scratch
 *.log
 .DS_Store
+
+# Local RAGOps data lake (raw, archive, quarantine, reports); the cluster uses a PVC
+.ragops-lake/
+.ragops-lake-pre/

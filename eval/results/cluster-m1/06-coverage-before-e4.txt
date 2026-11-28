@@ -1,0 +1,18 @@
+  # - {name: LABEL, value: coverage-before-cluster}
+  # - {name: WITHOUT_CATEGORY, value: "coverage_gap"}     # coverage_gap for the "before" run
+$ kubectl apply -f k8s/coverage-job.yaml
+job.batch/ragops-coverage created
+job/ragops-coverage: Failed
+$ kubectl logs -n rahbar job/ragops-coverage
+coverage: 28 of 41 live queries (68%) have a golden question with cosine >= 0.65 (need 85%)
+  uncovered topic 'counselling' (2): is there a counsellor i can talk to about exam stress; how do i book an appointment with the student counsellor
+  uncovered topic 'library' (2): what is the fine for returning a library book late; can i book a group study room in the library
+  uncovered topic 'sports' (2): when are the cricket team trials; what are the gym timings on campus
+  uncovered topic 'transport' (2): what time does the university bus leave in the evening; how do i register for the university bus service
+  uncovered topic 'attendance' (1): is 75% attendance enough to sit the final
+  uncovered topic 'cafeteria' (1): what are the cafeteria opening hours
+  uncovered topic 'course repeat' (1): if i repeat a course is my grade capped
+  uncovered topic 'exam conduct' (1): can i take my phone into the exam hall
+  uncovered topic 'it accounts' (1): how do i get my university email account
+results written to /results/coverage/20261128T134956Z-coverage-before-cluster.json
+FAIL: coverage below the threshold

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ...config import Settings
-from .semantic import NoCache, SemanticCache
+from .semantic import NoCache, SemanticCache, scope
 
 
 def get_cache(settings: Settings, embedder: Any) -> SemanticCache | NoCache:
@@ -17,5 +17,12 @@ def get_cache(settings: Settings, embedder: Any) -> SemanticCache | NoCache:
                              socket_timeout=settings.redis_timeout,
                              socket_connect_timeout=settings.redis_timeout)
         return SemanticCache(client, embedder, settings.cache_threshold,
-                             settings.cache_max_entries)
+                             settings.cache_max_entries, config_scope(settings))
     raise ValueError(f"unknown CACHE {settings.cache!r}; expected redis or none")
+
+
+def config_scope(settings: Settings) -> str:
+    """What an answer depends on besides the question and the index generation."""
+    return scope(settings.collection, settings.embed_model, settings.top_k,
+                 settings.relevance_floor, settings.llm_provider, settings.llm_model,
+                 settings.temperature, settings.guardrail_injection_action)

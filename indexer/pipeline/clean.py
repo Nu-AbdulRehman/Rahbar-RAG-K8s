@@ -16,6 +16,7 @@ look like noise but they are exact terms a student asks about.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from collections import Counter
 
 from .models import Document, Page
@@ -63,4 +64,4 @@ def clean(doc: Document) -> Document:
             kept.append(line)
         text = re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()
         cleaned.append(Page(page.source, page.page, text, page.ocr))
-    return Document(doc.source, doc.doc_version, doc.superseded, cleaned)
+    return replace(doc, pages=cleaned)        # keeps doc_id and title (RAGOps A1, A2)
