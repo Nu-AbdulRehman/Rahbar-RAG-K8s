@@ -73,15 +73,18 @@ git clone https://github.com/Nu-AbdulRehman/Rahbar-RAG-K8s.git && cd Rahbar-RAG-
 #    If Docker Desktop has less than 6 GB, add MINIKUBE_MEMORY=5120.
 make cluster
 
-# 2. Check the address the NetworkPolicy allows for Ollama. It must match the ipBlock in
-#    k8s/base/networkpolicy.yaml (192.168.65.254 on Docker Desktop; edit both ipBlocks if not).
+# 2. Check the address the NetworkPolicy allows for Ollama. It must match an ipBlock in
+#    k8s/base/networkpolicy.yaml: 192.168.65.254 (Docker Desktop) and 192.168.49.1 (Linux
+#    docker driver) are both listed; add yours to each Ollama rule if it is neither.
 minikube ssh "grep host.minikube.internal /etc/hosts"
 
-# 3. Images: build api, indexer and ui as :dev and load them into minikube.
+# 3. Images: build api, indexer, ui and eval as :dev and load them into minikube
+#    (eval/Dockerfile needs BuildKit: Docker Desktop has it, Linux needs docker-buildx).
 make images
 
-# 4. Everything else, in one apply: namespace, ServiceAccounts, ConfigMap, chroma, redis,
-#    api, ui, the indexer Job, the reindex CronJob, Ingress, HPA, NetworkPolicy.
+# 4. Everything else, in one apply: namespace, ServiceAccounts, ConfigMaps (rahbar-config,
+#    ragops-gate), the ragops-data and ragops-results PVCs, chroma, redis, api, ui, the
+#    indexer Job, the reindex CronJob, Ingress, HPA, NetworkPolicy.
 kubectl apply -k k8s/overlays/dev
 
 # 5. Only for LLM_PROVIDER=hosted: the key, from the command line, never from a file
@@ -89,7 +92,7 @@ kubectl apply -k k8s/overlays/dev
 export LLM_API_KEY=...
 kubectl create secret generic rahbar-secret -n rahbar --from-literal=LLM_API_KEY="$LLM_API_KEY"
 
-# 6. Wait for the first index (about 3 minutes: fetch, verify, OCR, embed, store) and the api.
+# 6. Wait for the first index (about 5 minutes: fetch, verify, OCR, embed, store) and the api.
 kubectl -n rahbar wait --for=condition=complete job/indexer --timeout=20m
 kubectl -n rahbar rollout status deploy/api
 
@@ -178,9 +181,10 @@ through the Ingress.
 ## RAGOps (Assignment 03): the command for each part
 
 Plan: [docs/planning/ragops-implementation-plan.md](docs/planning/ragops-implementation-plan.md).
-Results land in `eval/results/` (Part A evidence in `eval/results/a/`). The Kubernetes Jobs
-that run these on the cluster are Part F; until they land, the commands below run against a
-local stack (Chroma on `127.0.0.1:8001`, Ollama on the host, the api from `.venv`). Set
+Results land in `eval/results/` (Part A evidence in `eval/results/a/`, the cluster runs in
+`eval/results/cluster/` and `eval/results/f/`) and traces in `traces/`. **On the cluster,
+every part has its command in [k8s/README.md](k8s/README.md)** (Part F). The commands below
+run against a local stack (Chroma on `127.0.0.1:8001`, Ollama on the host, the api from `.venv`). Set
 `CHROMA_HOST=127.0.0.1 CHROMA_PORT=8001 OLLAMA_URL=http://127.0.0.1:11434` for the eval
 scripts.
 
@@ -220,6 +224,30 @@ python eval/suite.py --api http://localhost:8001 --collection rahbar-c200 --labe
 ```bash
 python eval/query_coverage.py --label coverage-before      # exits 1 below the threshold
 ```
+
+**C2. The release gate** (thresholds in `config/gate.yaml`, the same text in the
+`ragops-gate` ConfigMap; exit 0 release, 1 reject, 2 unusable input):
+```bash
+python scripts/gate.py eval/results/cluster/<stamp>-baseline-cluster.json eval/results/cluster/<stamp>-k6-cluster.json
+kubectl apply -f k8s/gate-job.yaml          # the same, as a Job, with the ConfigMap's thresholds
+```
+
+**C3 / F3. Candidate, release, rollback:** `kubectl apply -k k8s/release/k6` (or `minilm`,
+`baseline`) builds the candidate's collection with an indexer Job and runs `api-candidate`;
+the release is `kubectl set env deployment/api ...` watched with `kubectl rollout status`,
+and `kubectl rollout undo deployment/api` reverses a bad one (k8s/README.md, section 4).
+
+**D. Traces and metrics** (one JSON line per query on stdout and in `/results/traces`):
+```bash
+kubectl logs -n rahbar -l app=api --tail=-1 | grep '"msg": "trace"'
+kubectl exec -n rahbar deploy/api -- python -m app.tools.trace_show <trace_id>      # D2: rebuilds the prompt
+kubectl exec -n rahbar deploy/api -- python -m app.tools.trace_summary --since 2026-11-28T10:00
+python scripts/trace_show.py <trace_id> --dir traces                                # the committed copies
+kubectl port-forward -n rahbar svc/api 8000:8000   # then /metrics: rahbar_top1_similarity, rahbar_injections_flagged_total, rahbar_stage_seconds
+```
+
+**F. Kubernetes:** fresh cluster order, the unseen-batch ingestion, the eval and gate Jobs,
+the release and `kubectl get all,pvc,configmap,cronjob,job -n rahbar`: [k8s/README.md](k8s/README.md).
 
 ## Documents
 
