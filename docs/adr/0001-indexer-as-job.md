@@ -30,7 +30,8 @@ against one Chroma volume, so that design fails in four ways:
 
 ## Decision
 A Kubernetes Job is the only writer to Chroma: `indexer` in k8s/base/indexer.yaml:7, with
-`restartPolicy: OnFailure` (line 18) and `backoffLimit: 6` (line 12). A weekly CronJob,
+`restartPolicy: Never` and `backoffLimit: 6` (RAGOps: `OnFailure` until 2026-11-28; each
+retry now gets a new pod, so a failed attempt's logs survive, docs/failure-log.md). A weekly CronJob,
 `reindex` (line 62), runs the same image, command and arguments, with
 `concurrencyPolicy: Forbid` (line 68) so two writers never overlap. Re-indexing without a
 redeploy is one command:

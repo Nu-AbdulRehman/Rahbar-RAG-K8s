@@ -20,7 +20,7 @@ spec:
     metadata:
       labels: {app: indexer}
     spec:
-      restartPolicy: OnFailure
+      restartPolicy: Never              # each failed attempt keeps its own pod and logs (failure-log, RAGOps F4)
       serviceAccountName: indexer
       automountServiceAccountToken: false
       enableServiceLinks: false
@@ -83,7 +83,7 @@ spec:
         metadata:
           labels: {app: indexer}
         spec:
-          restartPolicy: OnFailure
+          restartPolicy: Never
           serviceAccountName: indexer
           automountServiceAccountToken: false
           enableServiceLinks: false

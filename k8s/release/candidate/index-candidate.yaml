@@ -18,7 +18,7 @@ spec:
     metadata:
       labels: {app: indexer, role: candidate}   # app: indexer, so the indexer NetworkPolicy applies
     spec:
-      restartPolicy: OnFailure
+      restartPolicy: Never
       serviceAccountName: indexer
       automountServiceAccountToken: false
       enableServiceLinks: false

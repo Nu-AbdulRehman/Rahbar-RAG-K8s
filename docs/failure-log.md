@@ -61,3 +61,18 @@ Appended when something breaks, not afterwards. Feeds engineering note Q7.
   embedding model, top_k, relevance floor, LLM and rail mode (providers/cache). A release
   starts with an empty cache for its configuration; an undo finds the old one again. Test
   shown red without the scope.
+
+## 2026-11-28 · ragops/f-kubernetes · a failed ingestion attempt left no logs (Member 2)
+- **Symptom:** the Batch B ingestion Job completed, but its pod showed `Restart Count: 1`:
+  the first attempt ran 10:59:44-11:02:58 UTC and exited 1. `kubectl logs --previous`
+  answered "unable to retrieve container logs", and Ollama's log has no error in that
+  window. The retry found Batch B already taken in (`intake: []`) and the fee page already
+  archived, so the first attempt failed inside the verification loop, before the
+  duplicates were quarantined; the retry finished every step correctly.
+- **Cause of the failure:** unknown. The logs were lost, which is the real problem:
+  `restartPolicy: OnFailure` restarts the container in place, and only one previous log
+  is kept, briefly.
+- **Fix:** `restartPolicy: Never` on the indexer Job, the CronJob and the candidate index
+  Job, so each attempt is its own pod and its logs stay with it until the Job is deleted.
+  The pipeline's steps proved safe to repeat (moves are recorded in the catalog, the sync
+  embeds only what changed).
