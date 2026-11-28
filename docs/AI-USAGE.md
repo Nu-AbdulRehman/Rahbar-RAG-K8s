@@ -166,6 +166,15 @@
 - **Shaped / Wrote:** Part A task list (Member 1): record decisions R1-R13 (plan); add doc_id and title to the corpus catalog (A1 completeness, recency); run a verification stage between extract and chunk with quality, completeness and recency checks (A1); move failed documents to quarantine with a reason and write a report per run (A1); hash chunks and embed only new or changed ones, update metadata without re-embedding, delete orphans (A2); archive superseded versions and restore one on command (A2); count chunks per document (A2); build Batch B with the planted problems (A2); test every check and rule (A1, A2).
 - **I changed:** left the uniqueness check (exact and near duplicates) as a named, not-yet-run slot in the verification report: it is Member 2's swap task in the plan.
 
+## 2026-11-28 · ragops/b-test-suite
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** Part B task list (Member 1): fix the LLM seed (B, R8); migrate the golden set to eval/golden.jsonl with types, origin and ground-truth pages (B); write 15+ paraphrase and 15+ unrelated embedding pairs (B module); measure cosine gap, embedding time and determinism (B module); compute recall@3, recall@5, MRR and nDCG@5 plus a typo noise test (B component); judge faithfulness with llama3.2:3b and leave 8 answers for hand labels (B end-to-end); measure abstention, citation validity and latency p50/p95 (B end-to-end); run the whole suite twice and diff every metric (B stochasticity); write one timestamped result file with a summary table from one command (B).
+- **I changed:** the 8 hand labels for the faithfulness judge are left for a person to fill in (eval/faithfulness_labels.jsonl): an AI label is not a hand label. Member 2's hand-written and synthetic questions are left as open slots.
+
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** how the suite measures retrieval: import the api's own ChromaRetriever and query router, so the component level runs the production retrieval code against any collection (chosen); rejected a separate retrieval reimplementation in eval/ (two copies of the superseded filter that can drift), and rejected measuring retrieval through /api/ask (every question would also pay for a generation).
+- **I changed:** accepted as-is.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -235,3 +244,5 @@
 - 2026-11-27 · docs/ragops-plan · ui base image to nginxinc/nginx-unprivileged:1.31.7-alpine after new nginx CVEs failed the ui scan on every PR; local Trivy clean, UI checked read-only (§6). One-time exception: committed as Nu-AbdulRehman at the user's request.
 - 2026-11-28 · ragops/a-data-management · Data lake (catalog, intake, quarantine, archive, restore), a verification stage with quality, completeness and recency checks and a report per run, and incremental sync (content hash: an unchanged corpus embeds 0, metadata flips without re-embedding, orphans deleted, chunk counts per doc_id); 16 new tests, shown red with the logic removed (RAGOps A1, A2).
 - 2026-11-28 · ragops/a-data-management · Batch B: 12 crafted documents with the planted problems (2 exact duplicates, 1 near duplicate, a truncated PDF, missing metadata, a newer fee-page version, an injected instruction, garbled OCR) and an expected-outcome table (RAGOps A2).
+- 2026-11-28 · ragops/b-test-suite · LLM_SEED (default 42) sent as Ollama's seed option, so two suite runs are comparable (RAGOps B, R8).
+- 2026-11-28 · ragops/b-test-suite · eval/suite.py (module, component with typo noise, end-to-end with a llama3.2:3b faithfulness judge, latency, two seeded runs with per-metric diff, timestamped result file and summary table), eval/ragops_metrics.py (MRR, nDCG@5, percentiles, seeded typos) with 7 tests, eval/golden.jsonl (27 questions: 16 answerable, 6 unanswerable, 5 hard; all labelled synthetic, unreviewed) and 32 embedding pairs (RAGOps B).

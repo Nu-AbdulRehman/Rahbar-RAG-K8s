@@ -32,7 +32,7 @@ class OllamaProvider:
                          {"role": "user", "content": prompt.user}],
             "format": prompt.schema,
             "stream": False,
-            "options": {"temperature": prompt.temperature},
+            "options": {"temperature": prompt.temperature, "seed": self.settings.llm_seed},
         })
         response.raise_for_status()
         body = response.json()

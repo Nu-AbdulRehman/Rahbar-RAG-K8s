@@ -282,6 +282,7 @@ def test_ollama_sends_the_schema_as_format_at_the_configured_temperature() -> No
     completion = provider.complete(build_prompt("q?", [ATTENDANCE], 0.1))
     body = json.loads(seen[0].content)
     assert body["format"]["title"] == "Answer" and body["options"]["temperature"] == 0.1
+    assert body["options"]["seed"] == 42            # fixed, for comparable runs (RAGOps B)
     assert body["stream"] is False and body["messages"][0]["role"] == "system"
     assert (completion.tokens_in, completion.tokens_out) == (120, 30)
 
