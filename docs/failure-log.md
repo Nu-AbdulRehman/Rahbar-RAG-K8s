@@ -47,3 +47,17 @@ Appended when something breaks, not afterwards. Feeds engineering note Q7.
   evidence are never cached (test shown red without it); the cache generation bumped once
   by hand for the demo. Evidence: eval/results/f/11-d4-flag-mode.txt and
   13-d4-redact-mode.txt.
+
+## 2026-11-28 · ragops/f-kubernetes · a release served the previous configuration's cached answers (Member 2)
+- **Symptom:** right after `kubectl set env deployment/api CHROMA_COLLECTION=rahbar-k6
+  TOP_K=6` and a finished `rollout status`, the first question returned `cached: true`; its
+  trace showed collection rahbar-k6, yet the answer was the one the old pods had cached
+  from rahbar with top_k 5.
+- **Cause:** the semantic cache had one list per index generation, shared by every
+  configuration. Only an indexer run bumps the generation, and a release or rollback by
+  `set env` runs no indexer. Worse for the bad release: all-minilm question vectors (384-d)
+  would have been compared with cached nomic vectors (768-d); `zip` silently truncates.
+- **Fix:** cache entries are keyed by generation *and* a fingerprint of collection,
+  embedding model, top_k, relevance floor, LLM and rail mode (providers/cache). A release
+  starts with an empty cache for its configuration; an undo finds the old one again. Test
+  shown red without the scope.

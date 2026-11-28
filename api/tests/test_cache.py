@@ -151,7 +151,7 @@ def test_abstentions_are_not_cached() -> None:
 def test_out_of_scope_and_failed_answers_are_not_cached(reply: dict) -> None:
     cache, redis = _setup()
     _ask(cache, "How much is refunded in 15 days?", Provider(reply))
-    assert redis.data.get("rahbar:cache:entries:0") is None
+    assert redis.data.get("rahbar:cache:entries:0:default") is None
 
 
 def test_follow_ups_skip_the_cache_both_ways() -> None:
@@ -161,7 +161,7 @@ def test_follow_ups_skip_the_cache_both_ways() -> None:
     _ask(cache, "How much is refunded in 15 days?", provider)               # cached
     follow = _ask(cache, "What about that within 15 days?", provider, history=history)
     assert follow.cached is False and provider.calls == 2                   # no lookup
-    assert len(redis.data["rahbar:cache:entries:0"]) == 1                   # no store
+    assert len(redis.data["rahbar:cache:entries:0:default"]) == 1                   # no store
 
 
 def test_an_index_run_invalidates_the_cache() -> None:
@@ -236,4 +236,28 @@ def test_old_version_questions_skip_the_cache_both_ways(
     _ask(cache, "How much is refunded in 15 days?", provider)                   # stored
     old = _ask(cache, old_q, provider)
     assert old.cached is False and provider.calls == 2          # no lookup: no hit
-    assert len(redis.data["rahbar:cache:entries:0"]) == 1       # and not stored
+    assert len(redis.data["rahbar:cache:entries:0:default"]) == 1       # and not stored
+
+
+def test_a_release_or_rollback_never_serves_the_old_configurations_answers() -> None:
+    """RAGOps F3, found on minikube: after `kubectl set env deployment/api
+    CHROMA_COLLECTION=rahbar-k6 TOP_K=6` the new pods served answers cached by the old
+    ones. Entries are scoped by the configuration; going back finds the old entries."""
+    from dataclasses import replace
+
+    from app.config import Settings
+    from app.providers.cache import config_scope
+
+    redis = FakeRedis()
+    base = Settings(cache="redis")
+    released = replace(base, collection="rahbar-k6", top_k=6)
+    bad = replace(base, collection="rahbar-minilm", embed_model="all-minilm")
+    assert len({config_scope(base), config_scope(released), config_scope(bad)}) == 3
+    assert config_scope(base) == config_scope(Settings(cache="redis"))     # stable
+    live = SemanticCache(redis, Embedder(), 0.95, 50, config_scope(base))
+    assert _ask(live, "What attendance is required?").cached is False
+    assert _ask(live, "What attendance is required?").cached is True
+    after = SemanticCache(redis, Embedder(), 0.95, 50, config_scope(released))
+    assert _ask(after, "What attendance is required?").cached is False
+    undone = SemanticCache(redis, Embedder(), 0.95, 50, config_scope(base))
+    assert _ask(undone, "What attendance is required?").cached is True
