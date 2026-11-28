@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 
 
@@ -21,6 +22,8 @@ class Document:
     doc_version: str         # e.g. "2026-06"; from corpus/sources.yaml
     superseded: bool         # True for an older version of a policy
     pages: list[Page] = field(default_factory=list)
+    doc_id: str = ""         # shared by every version of one document (RAGOps A1 recency)
+    title: str = ""
 
 
 @dataclass
@@ -32,6 +35,13 @@ class Chunk:
     page: int
     doc_version: str
     superseded: bool
+    doc_id: str = ""
+
+    @property
+    def content_hash(self) -> str:
+        """What was embedded. Equal hashes mean the stored vector is still right, so an
+        unchanged document is never embedded again (RAGOps A2)."""
+        return hashlib.sha256(self.text.encode("utf-8")).hexdigest()[:16]
 
     def metadata(self) -> dict[str, str | int | bool]:
         """Chroma metadata values must be str, int, float or bool."""
@@ -41,4 +51,6 @@ class Chunk:
             "page": self.page,
             "doc_version": self.doc_version,
             "superseded": self.superseded,
+            "doc_id": self.doc_id or self.source,
+            "content_hash": self.content_hash,
         }

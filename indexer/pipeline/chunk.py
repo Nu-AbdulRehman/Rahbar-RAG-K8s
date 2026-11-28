@@ -81,7 +81,7 @@ def chunk(doc: Document, size: int, overlap: int) -> list[Chunk]:
         chunks.append(Chunk(id=f"{doc.source}#{len(chunks):04d}",
                             text=section + "\n" + "\n".join(body), source=doc.source,
                             section=section, page=page, doc_version=doc.doc_version,
-                            superseded=doc.superseded))
+                            superseded=doc.superseded, doc_id=doc.doc_id))
 
     for section, paragraphs in _paragraphs(doc):
         budget = max(1, size - len(section.split()))

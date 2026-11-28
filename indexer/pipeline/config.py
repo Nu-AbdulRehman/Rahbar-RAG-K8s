@@ -25,6 +25,11 @@ class IndexerSettings:
     redis_host: str = "redis"       # the last step bumps the cache generation (3.3)
     redis_port: int = 6379
     pod_name: str = "-"             # HOSTNAME: the Job's pod, for the start-up log line
+    # The data lake (RAGOps A1, A2): incoming/, quarantine/, archive/, reports/ live here.
+    # /tmp works in any pod (an emptyDir); the cluster mounts a PVC instead (decision R4).
+    data_lake_dir: str = "/tmp/ragops"
+    verify_min_words: int = 20          # fewer extracted words fails the quality check
+    verify_max_garbled: float = 0.30    # share of unreadable characters that fails quality
 
 
 def get_settings() -> IndexerSettings:
@@ -44,4 +49,7 @@ def get_settings() -> IndexerSettings:
         redis_host=os.environ.get("REDIS_HOST", "redis"),
         redis_port=int(os.environ.get("REDIS_PORT", 6379)),
         pod_name=os.environ.get("HOSTNAME", "-"),
+        data_lake_dir=os.environ.get("DATA_LAKE_DIR", "/tmp/ragops"),
+        verify_min_words=int(os.environ.get("VERIFY_MIN_WORDS", 20)),
+        verify_max_garbled=float(os.environ.get("VERIFY_MAX_GARBLED", 0.30)),
     )
