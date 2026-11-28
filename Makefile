@@ -15,7 +15,7 @@ HOST ?= rahbar.local
 MINIKUBE_MEMORY ?= 6144
 
 .DEFAULT_GOAL := help
-.PHONY: help install test lint dev cluster images apply secret index ask fetch eval eval-fixtures check
+.PHONY: help install test lint dev cluster images apply secret index ask fetch eval eval-fixtures check gate traces trace
 
 help: ## list the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -43,13 +43,15 @@ cluster: ## start minikube with Calico, then enable metrics-server and ingress
 	minikube addons enable metrics-server
 	minikube addons enable ingress
 
-images: ## build the three images and load them into minikube (needs yours: Dockerfiles)
+images: ## build the four images (api, indexer, ui, eval) and load them into minikube
 	docker build -t rahbar-api:$(TAG) api
 	docker build -t rahbar-indexer:$(TAG) -f indexer/Dockerfile .
 	docker build -t rahbar-ui:$(TAG) ui
+	docker build -t rahbar-eval:$(TAG) -f eval/Dockerfile .
 	minikube image load rahbar-api:$(TAG)
 	minikube image load rahbar-indexer:$(TAG)
 	minikube image load rahbar-ui:$(TAG)
+	minikube image load rahbar-eval:$(TAG)
 
 apply: ## apply the dev overlay (needs yours: manifests)
 	kubectl apply -k k8s/overlays/dev
@@ -80,3 +82,13 @@ eval-fixtures: ## score the CI fixture golden set against a local `make dev`, wi
 
 check: ## run the submission checker
 	$(PY) scripts/check_submission.py
+
+# --- RAGOps (Assignment 03); k8s/README.md has the full order ----------------------------
+gate: ## apply the release gate to two result files: make gate BASE=eval/results/x.json CAND=eval/results/y.json
+	$(BIN)/python scripts/gate.py $(BASE) $(CAND)
+
+traces: ## copy the cluster's trace files into traces/ (through the ragops-shell pod)
+	kubectl cp $(NS)/ragops-shell:/results/traces ./traces
+
+trace: ## print the prompt behind an answer: make trace ID=<trace id>
+	kubectl exec -n $(NS) deploy/api -- python -m app.tools.trace_show $(ID)

@@ -1,0 +1,16 @@
+# Allowlist for `docker build -f eval/Dockerfile .` (BuildKit uses this file instead of the
+# root .dockerignore, which is the indexer's allowlist). Exactly what the Dockerfile copies.
+*
+!api/requirements.txt
+!api/app
+!eval/suite.py
+!eval/run_eval.py
+!eval/ragops_metrics.py
+!eval/query_coverage.py
+!eval/golden.jsonl
+!eval/embedding_pairs.jsonl
+!eval/live_queries.jsonl
+!scripts/gate.py
+!config/gate.yaml
+**/__pycache__
+**/*.pyc
