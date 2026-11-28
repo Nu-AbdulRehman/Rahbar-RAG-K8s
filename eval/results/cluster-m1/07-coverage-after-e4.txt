@@ -1,0 +1,14 @@
+  # - {name: LABEL, value: coverage-after-cluster}
+  # - {name: WITHOUT_CATEGORY, value: ""}     # coverage_gap for the "before" run
+$ kubectl apply -f k8s/coverage-job.yaml
+job.batch/ragops-coverage created
+job/ragops-coverage: Complete
+$ kubectl logs -n rahbar job/ragops-coverage
+coverage: 36 of 41 live queries (88%) have a golden question with cosine >= 0.65 (need 85%)
+  uncovered topic 'attendance' (1): is 75% attendance enough to sit the final
+  uncovered topic 'course repeat' (1): if i repeat a course is my grade capped
+  uncovered topic 'library' (1): can i book a group study room in the library
+  uncovered topic 'sports' (1): what are the gym timings on campus
+  uncovered topic 'transport' (1): how do i register for the university bus service
+results written to /results/coverage/20261128T135008Z-coverage-after-cluster.json
+PASS

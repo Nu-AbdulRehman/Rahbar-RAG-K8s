@@ -1,0 +1,43 @@
+job/indexer: Complete
+$ kubectl logs -n rahbar job/indexer --tail=40
+Found 3 pods, using pod/indexer-qnr9r
+  ok        undergraduate-academic-rules-aug-2023.pdf
+  ok        academic-rules-handbook-jun-2026.pdf
+  ok        prospectus-2026-academic-rules-and-regulations.pdf
+  ok        student-handbook-jun-2026.pdf
+  ok        annual-report-2019-20.pdf
+  ok        annual-report-2023-24.pdf
+  ok        fee-structure-page.html
+  ok        grading-page.html
+  ok        faculty-entrepreneurship-and-technical-start-ups-policy.pdf
+
+9 of 9 match the manifest
+{"ts": "2026-11-28T13:20:47Z", "logger": "rahbar.indexer", "msg": "indexer starting", "dummy": false, "embed_model": "nomic-embed-text", "collection": "rahbar", "chroma": "chroma:8000", "pod": "indexer-qnr9r"}
+{"ts": "2026-11-28T13:20:47Z", "logger": "rahbar.indexer", "msg": "data lake", "run": "20261128T132047Z", "intake": [], "added": [], "deleted": []}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/app/pipeline/run.py", line 197, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/app/pipeline/run.py", line 184, in main
+    count = run_pipeline(settings)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/pipeline/run.py", line 83, in run_pipeline
+    entries = lake.current()
+              ^^^^^^^^^^^^^^
+  File "/app/pipeline/lake.py", line 165, in current
+    return [e for e in self.catalog() if e.location in (RAW, ARCHIVE)]
+                       ^^^^^^^^^^^^^^
+  File "/app/pipeline/lake.py", line 127, in catalog
+    return [_entry(r) for r in json.loads(self.catalog_path.read_text(encoding="utf-8"))]
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/json/decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/json/decoder.py", line 356, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
