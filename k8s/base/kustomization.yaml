@@ -14,3 +14,4 @@ resources:
   - indexer.yaml
   - ingress.yaml
   - networkpolicy.yaml
+  - ragops-gate.yaml

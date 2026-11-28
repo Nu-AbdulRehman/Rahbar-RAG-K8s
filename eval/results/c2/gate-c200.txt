@@ -1,0 +1,16 @@
+$ python scripts/gate.py eval/results/20261128T082600Z-baseline-44.json eval/results/20261128T082940Z-c200-44.json --out eval/results/c2/gate-c200.json
+release gate, config config/gate.yaml
+  baseline:  baseline-44 (rahbar-base, nomic-embed-text, top_k 5, 20261128T082600Z)
+  candidate: c200-44 (rahbar-c200, nomic-embed-text, top_k 5, 20261128T082940Z)
+
+metric                   rule                  baseline candidate  result  detail
+------------------------------------------------------------------------------------------------
+recall_at_5              max_drop 0.02           0.6875    0.6406  FAIL    drop +0.0469 <= 0.0200
+faithfulness             min 0.64                0.7143    0.7333  PASS    0.7333 >= 0.64
+latency_p95_s            max 25                  6.6910   20.5630  PASS    20.56 <= 25
+latency_p50_s            max_ratio 1.5           2.4300    2.3800  PASS    2.38 / 2.43 = 0.979 <= 1.5
+abstention_correctness   not below baseline      1.0000    1.0000  PASS    1 >= baseline 1
+citation_validity        min 0.95                1.0000    1.0000  PASS    1 >= 0.95
+
+GATE FAIL: reject the candidate (recall_at_5 max_drop)
+exit code: 1
