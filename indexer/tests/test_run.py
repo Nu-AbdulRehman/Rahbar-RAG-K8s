@@ -131,3 +131,41 @@ def test_a_rollback_survives_the_next_ingestion(
     assert run.main() == 0
     superseded = {c.source: c.superseded for c in stored["chunks"]}
     assert superseded == {"fees-2026.md": False, "fees-2027.md": True}
+
+
+def test_batch_b_duplicates_are_quarantined_and_the_originals_indexed(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_data_lake: Path) -> None:
+    """Batch B's b01-b05 (corpus/batch_b/README.md): b02 and b04 are byte copies of b01
+    and b03, b05 is b03 with a few words changed under another doc_id."""
+    batch = Path(__file__).resolve().parents[2] / "corpus" / "batch_b"
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    for name in ("b01-library-rules.md", "b02-library-rules-copy.md", "b03-exam-conduct.md",
+                 "b04-exam-conduct-copy.md", "b05-exam-conduct-revised-wording.md",
+                 "b10-sports-facilities.md"):
+        shutil.copy(batch / name, raw / name)
+    stored: dict[str, Any] = {}
+    monkeypatch.setenv("CORPUS_DIR", str(raw))
+    monkeypatch.setenv("VERIFY_NEAR_DUPLICATE", "0.9")
+    monkeypatch.setattr("pipeline.store.sync", _fake_sync([], stored))
+    monkeypatch.setattr(run, "invalidate_cache", lambda s: 1)
+    monkeypatch.setattr("sys.argv", ["pipeline.run"])
+
+    assert run.main() == 0
+    report = json.loads(next((isolated_data_lake / "reports").glob("verify-*.json")).read_text())
+    assert report["near_duplicate_threshold"] == 0.9
+    actions = {d["file"]: d["action"] for d in report["documents"]}
+    assert actions == {"b01-library-rules.md": "index", "b02-library-rules-copy.md": "quarantine",
+                       "b03-exam-conduct.md": "index", "b04-exam-conduct-copy.md": "quarantine",
+                       "b05-exam-conduct-revised-wording.md": "quarantine",
+                       "b10-sports-facilities.md": "index"}
+    reasons = {d["file"]: {c["check"]: c["reason"] for c in d["checks"]}
+               for d in report["documents"]}
+    assert "exact duplicate of b01-library-rules.md" in \
+        reasons["b02-library-rules-copy.md"]["uniqueness"]
+    assert "near duplicate of b03-exam-conduct.md" in \
+        reasons["b05-exam-conduct-revised-wording.md"]["uniqueness"]
+    assert {c.source for c in stored["chunks"]} == {
+        "b01-library-rules.md", "b03-exam-conduct.md", "b10-sports-facilities.md"}
+    assert (isolated_data_lake / "quarantine" / "b02-library-rules-copy.md").exists()
+    assert (isolated_data_lake / "signatures.json").exists()
