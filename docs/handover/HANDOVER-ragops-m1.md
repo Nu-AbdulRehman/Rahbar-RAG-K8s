@@ -1,72 +1,191 @@
 # Handover: Member 1's RAGOps work, for Member 2
 
-Branches (stacked, merge in order): `ragops/a-data-management` → `ragops/b-test-suite` →
-`ragops/e-coverage`. Plan: docs/planning/ragops-implementation-plan.md; decisions R1-R13 and
-R10b in docs/decisions/DECISIONS.md.
+Member 1's parts (A, B, C1, E) are merged into `dev` (PRs #33, #34, #35). This file is what
+Member 2 needs to build C2, C3, D and F on top of them, plus the uniqueness check. Plan:
+docs/planning/ragops-implementation-plan.md. Decisions R1-R13 and R10b:
+docs/decisions/DECISIONS.md. Measured numbers: eval/results/final-44-summary.md.
 
-## What exists, and what your parts plug into
+## Read first: two things that changed since the plan
 
-**Ingestion with verification (Part A)**, the only Chroma writer (R9). Same image and entry
-point as A02: `python -m pipeline.run`. New environment variables, all with defaults:
+1. **The passing candidate is top_k 6, not chunking 200/40 (R10b).** Every chunking change lost
+   more than 2 points of recall@5. The plan's P4 and P5 still say 200/40; follow R10b. all-minilm
+   stays the failing candidate and the bad release.
+2. **The commit split (R3).** Every RAGOps commit on `dev` so far is Member 1's. R3 needs each
+   member at 40 % or more of `git shortlog -sn`. Commit C2, D and F in small steps.
 
-| Variable | Default | Meaning |
+## Status by part
+
+| Part | Item | Owner | Status |
+| --- | --- | --- | --- |
+| A1 | quality, completeness, recency checks, quarantine, report per run | M1 | done |
+| A1 | uniqueness check (exact and near duplicates) | **M2 (swap)** | slot ready, see below |
+| A2 | data lake, incremental sync, restore, orphan pruning; Batch B | M1 | done |
+| B | golden set (44), suite on three levels, judge agreement, two seeded runs | M1 + both | done |
+| C1 | baseline against k6, c200, o40, minilm | M1 | done (locally) |
+| C2 | `config/gate.yaml`, `ragops-gate` ConfigMap, `scripts/gate.py` | **M2** | open |
+| C3 / F3 | `api-candidate`, rolling update, `rollout undo` | **M2** | open |
+| D1-D4 | trace record, trace tool, metrics and summary, guardrail logging | **M2** | open |
+| D5 | root cause from a trace | M1 writes, M2 reviews | waits on D1 |
+| E1-E4 | live log, coverage 68 % to 88 %, drift, gap closed | M1 | done (locally) |
+| F1, F2, F4, F5 | PVCs, Jobs and CronJob, traces on the volume, measured resources | **M2** | open |
+| F2 | `k8s/eval-job.yaml` | **M1 (swap)** | waits on F1's PVC and the eval image |
+| F | `k8s/README.md` fresh-cluster order | **M2** | open |
+| G | report: M1 Parts A, B, C1, E and Q4 a, b, d; M2 Parts C2, D, F and Q4 c, e, f | both | open |
+
+## Interfaces you plug into
+
+### Uniqueness check (A1, your swap task)
+
+- `indexer/pipeline/verify.py`: return `Check("uniqueness", passed, reason)`; `passed=None`
+  means "not run". `decide()` already quarantines a document whose uniqueness check fails.
+- Replace `uniqueness_not_run()` in the `checks = [...]` list in `indexer/pipeline/run.py`.
+- Embeddings: `pipeline.embed.embed(texts, settings, client=None)` returns one vector per text
+  with the pinned `EMBED_MODEL`. Compare against the documents already in `raw/` and against the
+  others in the same batch.
+- Test cases in Batch B (`corpus/batch_b/README.md` has the expected outcome of every file):
+  b02 is an exact copy of b01, b04 an exact copy of b03, b05 a near duplicate of b03. Today all
+  three are indexed. Put the threshold for "near" in the `ragops-gate` ConfigMap, with the
+  similarities it was chosen from.
+- Indexer tests use an autouse isolated data lake (`indexer/tests/conftest.py`); copy the
+  pattern of `test_verify.py`.
+
+### Ingestion Job (F1, F2)
+
+- Same image and entry point as A02: `python -m pipeline.run`. Today `k8s/base/indexer.yaml`
+  (Job `indexer`, CronJob `reindex`) downloads into an `emptyDir` at `/corpus`. Replace that with
+  the `ragops-data` PVC (R4).
+- Environment: `DATA_LAKE_DIR` (mount the PVC here), `CORPUS_DIR=$DATA_LAKE_DIR/raw`,
+  `VERIFY_MIN_WORDS` (20), `VERIFY_MAX_GARBLED` (0.30), plus A02's `CHROMA_COLLECTION`,
+  `CHUNK_SIZE`, `CHUNK_OVERLAP`, `EMBED_MODEL`.
+- Command: `python corpus/fetch.py --out $DATA_LAKE_DIR/raw`, then `fetch.py --verify --out ...`,
+  then `python -m pipeline.run`.
+- Lake layout: `catalog.json`, `incoming/`, `raw/`, `archive/<doc_id>/<version>/`,
+  `quarantine/` (with `<file>.reason.json`), `reports/verify-<run>.json` and
+  `reports/ingest-<run>.json`.
+- Operations in the same image: `python -m pipeline.ops counts | status | restore <doc_id>
+  <version>`.
+- Unseen batch for the demo: `corpus/batch_b/` is not in the image. Copy it into
+  `$DATA_LAKE_DIR/incoming/` with `kubectl cp` through a pod that mounts the PVC; the next run
+  moves it to `raw/`.
+
+### Candidate collections (C1, F3; R9: built by the ingestion Job only)
+
+| Collection | Settings that differ from the baseline | Role |
 | --- | --- | --- |
-| `DATA_LAKE_DIR` | `/tmp/ragops` | the data lake root; mount the `ragops-data` PVC here (R4) |
-| `CORPUS_DIR` | `/corpus` | raw documents; set it to `$DATA_LAKE_DIR/raw` with the PVC |
-| `VERIFY_MIN_WORDS` | 20 | quality check |
-| `VERIFY_MAX_GARBLED` | 0.30 | quality check |
+| `rahbar-base` | none: 150/30, nomic-embed-text, top_k 5 | baseline, the live api |
+| `rahbar-k6` | the api's `TOP_K=6` (same chunks as the baseline) | the passing candidate |
+| `rahbar-minilm` | `EMBED_MODEL=all-minilm` in the Job and the api | the failing candidate and the bad release |
+| `rahbar-c200`, `rahbar-o40` | `CHUNK_SIZE=200, CHUNK_OVERLAP=40`; `CHUNK_OVERLAP=40` | measured, fail recall |
 
-Lake layout: `catalog.json`, `incoming/` (a new batch: the demo copies files here, the next
-run's intake moves them to `raw/`), `raw/`, `archive/<doc_id>/<version>/`, `quarantine/`,
-`reports/verify-<run>.json` and `reports/ingest-<run>.json`. The Job's command on the
-cluster becomes `fetch.py --out $DATA_LAKE_DIR/raw`, `fetch.py --verify --out ...`, then
-`python -m pipeline.run`. Other commands in the same image: `python -m pipeline.ops counts |
-status | restore <doc_id> <version>`.
+- The api reads `CHROMA_COLLECTION`, `EMBED_MODEL` and `TOP_K`, so a candidate Deployment is the
+  same image with those values changed.
+- Build every C1 collection **before** Batch B goes into `incoming/`. Each run's intake moves
+  `incoming/` into `raw/`, so a later candidate build would include Batch B and stop being
+  comparable.
+- Every indexer run invalidates the live cache as its last step, including a candidate build.
+  That is expected.
 
-**Your uniqueness check (A1, your swap task):** `indexer/pipeline/verify.py` reports it as
-`uniqueness_not_run()`. Replace that call in `indexer/pipeline/run.py` (the `checks = [...]`
-list) with your check returning a `Check("uniqueness", passed, reason)`; `decide()` already
-quarantines on a uniqueness failure. Batch B's b02 and b04 (exact) and b05 (near) are the
-cases; corpus/batch_b/README.md has the expected outcomes.
+### The suite and the gate (C2, F2)
 
-**The suite (Part B)**, for your gate (C2) and the eval Job (F2):
-`python eval/suite.py --api <url> --collection <name> --label <label> [--runs 2]` writes
-`eval/results/<UTC stamp>-<label>.json`. Top-level keys your gate needs:
-`component["recall@5"]`, `end_to_end["faithfulness"]`, `end_to_end["latency_p95_s"]`,
-`end_to_end["abstention_correctness"]` (plus `citation_validity`, `mrr`, `ndcg@5`). It reads
-Chroma and Ollama from the api's variables (`CHROMA_HOST`, `CHROMA_PORT`, `OLLAMA_URL`,
-`EMBED_MODEL`, `TOP_K`, `EMBED_TIMEOUT_SECONDS`), so the eval Job image needs api/ and eval/
-on the path, which the api image almost has (add eval/).
+- Run: `python eval/suite.py --api <url> --collection <name> --label <label> [--runs 2]
+  [--out-dir <dir>]`. The output is `<out-dir>/<UTC stamp>-<label>.json`; point `--out-dir` at
+  the `ragops-results` PVC.
+- The suite exits 0 on every completed run. **Pass or fail is your gate's decision**:
+  `scripts/gate.py baseline.json candidate.json` exits 1 on a failure, and the eval Job runs
+  the gate after the suite so the Job itself fails.
+- Keys the gate reads: `component["recall@5"]`, `end_to_end["faithfulness"]`,
+  `end_to_end["latency_p50_s"]`, `end_to_end["latency_p95_s"]`,
+  `end_to_end["abstention_correctness"]`, `end_to_end["citation_validity"]`. Also there:
+  `component["mrr"]`, `component["ndcg@5"]`, `component["noise_test"]`, and, with `--runs 2`,
+  `stochasticity["difference"]`.
+- The suite talks to the api over HTTP and also to Chroma and Ollama directly, with the api's
+  variables: `CHROMA_HOST`, `CHROMA_PORT`, `OLLAMA_URL`, `EMBED_MODEL`, `TOP_K`,
+  `EMBED_TIMEOUT_SECONDS` (use 60).
+- **Eval image:** the suite imports the api package. The api image is built from `api/` as its
+  context and has no `eval/`. Build the eval image from the repo root with `api/app` and `eval/`
+  in it, or extend the api Dockerfile. Decide this, then tell Member 1, who writes
+  `k8s/eval-job.yaml`.
+- Coverage: `python eval/query_coverage.py --label <label> [--out-dir <dir>]` exits 1 below the
+  minimum share. `COVERAGE_THRESHOLD` (0.65, measured) and `COVERAGE_MIN_SHARE` (0.85) go into
+  the `ragops-gate` ConfigMap (R6).
 
-**Coverage (Part E):** `python eval/query_coverage.py --label <label>`, exit 1 below the
-minimum share. `COVERAGE_THRESHOLD` (0.65, measured) and `COVERAGE_MIN_SHARE` (0.85) belong
-in the `ragops-gate` ConfigMap (R6).
+### Measured values for the gate thresholds (44 questions, local stack)
 
-## Measured, for C2 and F3
-
-On the final 44-question golden set (eval/results/final-44-summary.md, 2026-11-28):
-
-| label | collection | recall@5 | faithfulness | p50 (s) | abstention | for |
+| Run | Collection | recall@5 | faithfulness | p50 (s) | p95 (s) | abstention |
 | --- | --- | --- | --- | --- | --- | --- |
-| baseline-44 | rahbar-base (150/30, nomic, pre-Batch-B) | 0.688 | 0.714 | 2.43 | 1.00 | the live api |
-| k6-44 | rahbar-k6 (top_k 6) | 0.688 | 0.733 | 2.44 | 1.00 | the passing candidate (R10b) |
-| minilm-44 | rahbar-minilm (all-minilm) | 0.594 | 0.750 | 0.06 | 1.00 | the failing candidate and the bad release |
-| c200-44 | rahbar-c200 (200/40) | 0.641 | 0.733 | 2.38 | 1.00 | measured, fails recall |
-| o40-44 | rahbar-o40 (150/40) | 0.625 | 0.812 | 2.24 | 1.00 | measured, fails recall |
+| baseline-44 | rahbar-base | 0.688 | 0.714 | 2.43 | 6.69 | 1.00 |
+| k6-44-isolated | rahbar-k6 | 0.688 | 0.733 | 2.44 | 12.54 | 1.00 |
+| minilm-44 | rahbar-minilm | 0.594 | 0.750 | 0.06 | 3.37 | 1.00 |
+| c200-44 | rahbar-c200 | 0.641 | 0.733 | 2.38 | 20.56 | 1.00 |
+| o40-44 | rahbar-o40 | 0.625 | 0.812 | 2.24 | 5.37 | 1.00 |
 
-The api reads `CHROMA_COLLECTION`, `EMBED_MODEL` and `TOP_K`, so each candidate Deployment
-is the same image with those three values changed. Gate on the median latency or on cluster
-numbers: local p95 swings from 3 s to 32 s on the same code (Ollama prompt-cache stalls, see
-the summary). all-minilm's low latency is declines, because its similarities fall under the
-nomic-calibrated relevance floor. All numbers were measured locally (Chroma in Docker, Ollama
-on the host GPU); re-run them as Jobs on the cluster for the report.
+- With the rule "recall@5 drops by no more than 2 points", k6 passes and minilm fails.
+- Faithfulness X: the two seeded baseline runs and the judge's 75 % agreement with the hand
+  labels are the evidence. Don't set X above what the baseline itself reaches.
+- Latency Y: **do not gate on local p95.** It swings from 3 s to 32 s on the same code because
+  the laptop's Ollama prompt-cache restore stalls (up to 7.2 s at a time in its log). Gate on p50,
+  or measure p95 as a cluster Job and justify Y from that.
+- minilm's p50 of 0.06 s is declines, not speed: its similarities fall under the relevance
+  floor of 0.65, which was measured for nomic-embed-text. Its recall drop is the signal, not its
+  latency.
+- All these numbers are local (Chroma in Docker, Ollama on the host GPU). The brief wants the
+  report's numbers from the cluster: re-run them as Jobs once F2 works.
 
-## Done by the members
+### Trace record (D1-D4)
 
-- 8 golden questions written by hand (q37-q44, 4 each), 8 synthetic ones reviewed by both.
-- 8 faithfulness hand labels: judge agreement 6 of 8 (eval/results/faithfulness-agreement.txt).
+- Hook point: `api/app/services/answer.py`, `answer_question()`. Its module docstring lists the
+  query steps in order, and each step holds values a trace needs: retrieved passages with
+  scores, the filter from `asks_about_older_version`, the prompt from `build_prompt`, and the
+  generation result with attempts and fallback.
+- Retrieved chunk metadata already has `doc_id`, `doc_version`, `superseded` and the content
+  hash. Every `rahbar-*` collection stores its embedding model and dimension in its metadata.
+- Metrics live in `api/app/routes/metrics.py` (abstentions, fallbacks, cache lookups, latency
+  histograms). Add the top-1 similarity histogram and the injection-flagged counter there, with
+  bounded labels only.
+- D4 test document: Batch B's b09 (`b09-it-acceptable-use.md`) has "Ignore all previous
+  instructions..." in section 3. It passes verification on purpose; the guardrail has to catch it
+  at query time.
+- Rules carried from A02: no secrets in a trace; the full prompt goes to the volume, never to INFO
+  logs (ADR 0004); the poisoned-chunk test stays.
+- **D5 depends on this.** Member 1 needs one trace with scores and versions to write the root
+  cause. Send a trace id when D1 runs on the cluster.
+
+### Controlled release (C3, F3)
+
+- `api-candidate`: a second Deployment and Service, same image, its own `CHROMA_COLLECTION`,
+  `EMBED_MODEL` and `TOP_K`, and its own NetworkPolicy allow rules copied from the api's.
+- Bad release with `rollout undo`: change the live Deployment's environment with
+  `kubectl set env deployment/api ...`, not the shared `rahbar-config` ConfigMap. A ConfigMap
+  edit does not start a rollout, so there is no revision to undo, and the indexer reads the same
+  ConfigMap.
+- The embedding pin (A02 §4.4): an api with `EMBED_MODEL=all-minilm` must point at
+  `rahbar-minilm`, or it stays not-ready by design. The trace after the undo must show the
+  previous collection and embedding model.
+
+## Local stack Member 1 measured on
+
+- Docker network `rahbar`: `chromadb/chroma:1.0.12` on 127.0.0.1:8001 (volume
+  `ragops-chroma-data`), `redis:7.4.2` on 6379.
+- Ollama 0.40.19 on the host GPU with llama3.2:3b, nomic-embed-text and all-minilm.
+- The indexer image is `rahbar-indexer:ragops` (it has tesseract); the api runs from `.venv`.
+
+## Traps already hit (docs/failure-log.md has the details)
+
+- Use `127.0.0.1`, not `localhost`, for Ollama on the laptop: `localhost` costs about 2 s per
+  request because IPv6 is tried first. On the cluster use `host.minikube.internal`.
+- Set `EMBED_TIMEOUT_SECONDS=60`: the first embedding after a model load can take longer than
+  the default.
+- Ollama can run on the CPU only after a reinstall. Check that `ollama ps` shows `100% GPU`
+  before measuring anything.
+- Several api processes against one Ollama inflate p95 (k6: 32 s with six apis running, 12.5 s
+  alone). Run measurement Jobs one at a time.
+- `*.log` is gitignored; commit evidence as `.txt`.
 
 ## Still waiting on Member 2
 
-- The uniqueness check, C2/C3, D and F.
-- D5's root cause needs your trace record first.
+1. The uniqueness check.
+2. D1-D4, then a trace id for D5.
+3. C2: gate config, ConfigMap and script, with one failing and one passing candidate.
+4. F1-F5 and `k8s/README.md`, then the eval image decision, so Member 1 can write
+   `k8s/eval-job.yaml`.
+5. Re-running Parts A, B, C1 and E as cluster Jobs for the report.
