@@ -1,0 +1,2 @@
+$ kubectl exec -n rahbar deploy/redis -- redis-cli INCR rahbar:cache:generation
+7
