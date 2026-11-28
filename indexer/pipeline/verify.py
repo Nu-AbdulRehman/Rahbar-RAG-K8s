@@ -216,11 +216,11 @@ class Duplicates:
                 best = (similarity, seen.entry)
         if best is not None and best[0] >= self.threshold:
             return Check("uniqueness", False,
-                         f"near duplicate of {best[1].file} (cosine {best[0]:.3f} >= "
-                         f"{self.threshold:.3f})"), None
-        closest = f"closest {best[1].file} at {best[0]:.3f}" if best else "first document"
+                         f"near duplicate of {best[1].file} (cosine {best[0]:.4f} >= "
+                         f"{self.threshold:.4f})"), None
+        closest = f"closest {best[1].file} at {best[0]:.4f}" if best else "first document"
         return Check("uniqueness", True,
-                     f"no duplicate ({closest}; threshold {self.threshold:.3f})"), \
+                     f"no duplicate ({closest}; threshold {self.threshold:.4f})"), \
             _Accepted(entry, digest, vector)
 
     def remember(self, record: _Accepted | None) -> None:

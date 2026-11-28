@@ -66,12 +66,12 @@ def render(record: dict[str, Any]) -> str:
            f"reranker:         {ret.get('reranker')}; prompt order {ret.get('reranked_order')}"]
     flagged = {g.get("chunk_id") for g in record.get("guardrails", []) if g.get("chunk_id")}
     out.append(_rule("retrieved chunks"))
-    out.append(f"{'#':>2} {'score':>6} {'floor':5} {'chunk_id':34} {'doc_id @ version':40} "
+    out.append(f"{'#':>2} {'score':>6} {'floor':5} {'chunk_id':52} {'doc_id @ version':36} "
                "superseded rail")
     for c in ret.get("chunks", []):
         doc = f"{c.get('doc_id')} @ {c.get('doc_version')}"
         out.append(f"{c['rank']:>2} {c['score']:>6.3f} {'ok' if c.get('above_floor') else 'below':5} "
-                   f"{c['chunk_id'][:34]:34} {doc[:40]:40} {str(c.get('superseded')):10} "
+                   f"{c['chunk_id'][:52]:52} {doc[:36]:36} {str(c.get('superseded')):10} "
                    f"{'FLAGGED' if c['chunk_id'] in flagged else ''}")
     out.append(_rule("guardrails"))
     out += [f"- {json.dumps(g)}" for g in record.get("guardrails", [])] or ["- none acted"]
