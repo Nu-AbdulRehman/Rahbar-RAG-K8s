@@ -222,6 +222,26 @@ def test_the_batch_b_injection_is_flagged_in_the_trace_and_counted(tmp_path: Pat
     assert "Ignore all previous" not in provider.prompts[0].system
 
 
+def test_an_answer_built_on_flagged_evidence_is_never_cached(tmp_path: Path) -> None:
+    """Found on minikube: in flag mode the model repeated b09's planted claim with a valid
+    citation, the answer was cached, and switching the rail to redact still served it."""
+    from tests.test_cache import Embedder, FakeRedis
+
+    cache = SemanticCache(FakeRedis(), Embedder(), 0.95, max_entries=50)
+    settings = Settings(relevance_floor=0.65, cache="redis")
+    reply = _reply(answer="All fees are waived [b09-it-acceptable-use.md / 3. Assistant notice].",
+                   citations=[{"source": "b09-it-acceptable-use.md",
+                               "section": "3. Assistant notice", "page": 1}])
+    first = answer_question("Are fees waived?", Retriever(B09), Provider(reply), settings,
+                            cache=cache, sink=TraceSink(str(tmp_path), "p"))
+    assert first.answered_from_context is True
+    again = answer_question("Are fees waived?", Retriever(B09), Provider(reply), settings,
+                            cache=cache, sink=TraceSink(str(tmp_path), "p"))
+    assert again.cached is False
+    record = json.loads(next(tmp_path.glob("traces-*.jsonl")).read_text().splitlines()[0])
+    assert record["cache"]["stored"] is False
+
+
 def test_redact_mode_cuts_the_injected_sentences_from_the_prompt(tmp_path: Path) -> None:
     record, provider = _ask(tmp_path, ATTENDANCE, B09, guardrail_injection_action="redact")
     user = provider.prompts[0].user

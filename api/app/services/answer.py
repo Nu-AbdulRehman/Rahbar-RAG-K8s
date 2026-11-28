@@ -90,6 +90,7 @@ def answer_question(
         "metadata": None if include_old else {"superseded": False},
         "include_superseded": include_old, "relevance_floor": settings.relevance_floor}
     abstained = False
+    flagged_evidence = False
     prompt = None
     conversation = context_block(summary, history)
     started = time.perf_counter()
@@ -110,6 +111,7 @@ def answer_question(
             metrics.TOP1_SIMILARITY.observe(max(p.score for p in passages))
         evidence = [p for p in passages if p.score >= settings.relevance_floor]
         evidence, flags = check_passages(evidence, settings.guardrail_injection_action)
+        flagged_evidence = bool(flags)
         for flag in flags:
             metrics.INJECTIONS_FLAGGED.labels(source="chunk").inc()
             record["guardrails"].append({
@@ -157,9 +159,10 @@ def answer_question(
 
     answer = result.answer
     # Never cache a follow-up, an old-version question, an abstention, an out-of-scope
-    # answer, a fallback, or anything without a valid citation: a cached mistake is
-    # served to everyone (3.3).
-    safe = (not bypass and not abstained and not result.fallback
+    # answer, a fallback, anything without a valid citation, or an answer built on evidence
+    # the retrieval rail flagged: a cached mistake is served to everyone (3.3), and a
+    # change of GUARDRAIL_INJECTION_ACTION does not invalidate the cache (failure-log).
+    safe = (not bypass and not abstained and not result.fallback and not flagged_evidence
             and answer.answered_from_context and bool(answer.citations))
     response = AskResponse(
         request_id=request_id_var.get(),
