@@ -126,7 +126,10 @@ class Lake:
         CronJob's run is going) waits here instead of reading catalog.json half-written or
         a file the first run is moving. Found on the cluster, where two overlapping runs
         failed with JSONDecodeError and FileNotFoundError. Released when the returned file
-        is closed or the process ends, so a crashed run never leaves a stale lock."""
+        is closed or the process ends, so a crashed run never leaves a stale lock.
+
+        ponytail: flock is enforced on node-local storage (the ReadWriteOnce lake PVC); on an
+        NFS-backed ReadWriteMany volume shared across nodes, use a Kubernetes Lease instead."""
         self.root.mkdir(parents=True, exist_ok=True)
         handle = open(self.root / ".lock", "a+b")       # noqa: SIM115 - the caller holds it
         if sys.platform == "win32":                      # local runs on Windows
