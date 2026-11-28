@@ -6,6 +6,15 @@
 #   api, indexer -> Ollama on the host :11434    indexer -> nu.edu.pk :443 (corpus fetch, Q4)
 #   every pod -> kube-dns :53 UDP and TCP
 #
+# RAGOps additions (F2, F3):
+#   ragops-eval (the eval Job) -> api, api-candidate :8000, chroma :8000, Ollama :11434
+#   api-candidate: the api's rules, minus redis (the candidate runs CACHE=none) and the ui
+#   ragops-gate (the gate Job) has no rule at all: it reads two files from a volume
+#
+# Ollama's address: 192.168.65.254 is host.minikube.internal under Docker Desktop (Windows,
+# macOS); 192.168.49.1 is the same name under the Linux docker driver. Both are listed so
+# one manifest works on both members' laptops; neither address is routable to anything else.
+#
 # The ui has no path to chroma or redis (docs/evidence/networkpolicy-proof.txt).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -67,6 +76,8 @@ spec:
             matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
         - podSelector:
             matchLabels: {app: ui}
+        - podSelector:
+            matchLabels: {app: ragops-eval}   # the eval Job runs the suite against the live api
       ports:
         - {protocol: TCP, port: 8000}
   egress:
@@ -83,6 +94,8 @@ spec:
     - to:
         - ipBlock:
             cidr: 192.168.65.254/32    # host.minikube.internal (minikube ssh "grep host.minikube.internal /etc/hosts")
+        - ipBlock:
+            cidr: 192.168.49.1/32      # the same name under the Linux docker driver
       ports:
         - {protocol: TCP, port: 11434}
 ---
@@ -109,6 +122,8 @@ spec:
     - to:
         - ipBlock:
             cidr: 192.168.65.254/32    # host.minikube.internal: Ollama embeddings
+        - ipBlock:
+            cidr: 192.168.49.1/32      # the same name under the Linux docker driver
       ports:
         - {protocol: TCP, port: 11434}
     - to:
@@ -131,6 +146,10 @@ spec:
             matchLabels: {app: api}
         - podSelector:
             matchLabels: {app: indexer}
+        - podSelector:
+            matchLabels: {app: api-candidate}
+        - podSelector:
+            matchLabels: {app: ragops-eval}   # the suite's component level reads Chroma directly
       ports:
         - {protocol: TCP, port: 8000}
   # No egress rule: with Egress in policyTypes, Chroma can call nothing.
@@ -152,3 +171,63 @@ spec:
       ports:
         - {protocol: TCP, port: 6379}
   # No egress rule: with Egress in policyTypes, Redis can call nothing.
+---
+# The candidate api (F3): the api's rules, without redis (CACHE=none, so a candidate never
+# writes answers into the live cache) and without the ui and the Ingress (nobody but the
+# eval Job talks to it).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-candidate
+spec:
+  podSelector:
+    matchLabels: {app: api-candidate}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: ragops-eval}
+      ports:
+        - {protocol: TCP, port: 8000}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: chroma}
+      ports:
+        - {protocol: TCP, port: 8000}
+    - to:
+        - ipBlock:
+            cidr: 192.168.65.254/32    # host.minikube.internal (Docker Desktop)
+        - ipBlock:
+            cidr: 192.168.49.1/32      # host.minikube.internal (Linux docker driver)
+      ports:
+        - {protocol: TCP, port: 11434}
+---
+# The eval Job (F2; k8s/eval-job.yaml, label app: ragops-eval): the suite asks the live api
+# or the candidate over HTTP, reads Chroma for the component level, and calls Ollama for the
+# module level and the faithfulness judge. Nothing connects to it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ragops-eval
+spec:
+  podSelector:
+    matchLabels: {app: ragops-eval}
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: {app: api}
+        - podSelector:
+            matchLabels: {app: api-candidate}
+        - podSelector:
+            matchLabels: {app: chroma}
+      ports:
+        - {protocol: TCP, port: 8000}
+    - to:
+        - ipBlock:
+            cidr: 192.168.65.254/32    # host.minikube.internal (Docker Desktop)
+        - ipBlock:
+            cidr: 192.168.49.1/32      # host.minikube.internal (Linux docker driver)
+      ports:
+        - {protocol: TCP, port: 11434}
