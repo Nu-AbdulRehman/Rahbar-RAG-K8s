@@ -18,9 +18,10 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 INDEX = "_index.json"              # written by corpus/fetch.py next to the files
 DOC_SUFFIXES = {".pdf", ".md", ".html", ".htm", ".txt"}
@@ -119,6 +120,27 @@ class Lake:
         self.quarantine_dir = self.root / QUARANTINE
         self.reports = self.root / "reports"
         self.catalog_path = self.root / "catalog.json"
+
+    def lock(self) -> IO[bytes]:
+        """Hold the lake for one ingestion run: a second run (a Job started while the
+        CronJob's run is going) waits here instead of reading catalog.json half-written or
+        a file the first run is moving. Found on the cluster, where two overlapping runs
+        failed with JSONDecodeError and FileNotFoundError. Released when the returned file
+        is closed or the process ends, so a crashed run never leaves a stale lock."""
+        self.root.mkdir(parents=True, exist_ok=True)
+        handle = open(self.root / ".lock", "a+b")       # noqa: SIM115 - the caller holds it
+        if sys.platform == "win32":                      # local runs on Windows
+            import msvcrt
+            while True:
+                try:
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:                          # LK_LOCK gives up after ~10 s
+                    continue
+        else:
+            import fcntl
+            fcntl.flock(handle, fcntl.LOCK_EX)
+        return handle
 
     # --- catalog -----------------------------------------------------------------------
     def catalog(self) -> list[Entry]:

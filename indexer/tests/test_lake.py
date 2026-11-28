@@ -103,3 +103,30 @@ def test_a_batch_beside_a_fetch_index_is_still_catalogued(tmp_path: Path) -> Non
     lake.intake()
     lake.refresh()
     assert sorted(e.file for e in lake.current()) == ["fees.html", "library.md"]
+
+
+def test_the_lake_lock_is_exclusive_and_released_on_close(tmp_path) -> None:
+    """Two overlapping ingestion runs corrupted the lake on the cluster (JSONDecodeError on
+    catalog.json, FileNotFoundError on a moved file); the second run must wait."""
+    import sys
+
+    from pipeline.lake import Lake
+
+    def try_lock(path) -> bool:
+        with open(path, "a+b") as other:
+            try:
+                if sys.platform == "win32":
+                    import msvcrt
+                    msvcrt.locking(other.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                return False
+            return True
+
+    lake = Lake(str(tmp_path / "lake"))
+    held = lake.lock()
+    assert not try_lock(tmp_path / "lake" / ".lock")      # a second run would wait
+    held.close()
+    assert try_lock(tmp_path / "lake" / ".lock")          # released: the next run goes
