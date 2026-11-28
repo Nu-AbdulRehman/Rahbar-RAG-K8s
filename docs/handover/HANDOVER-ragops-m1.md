@@ -181,11 +181,36 @@ docs/decisions/DECISIONS.md. Measured numbers: eval/results/final-44-summary.md.
   alone). Run measurement Jobs one at a time.
 - `*.log` is gitignored; commit evidence as `.txt`.
 
-## Still waiting on Member 2
+## Closed (2026-11-28)
 
-1. The uniqueness check.
-2. D1-D4, then a trace id for D5.
-3. C2: gate config, ConfigMap and script, with one failing and one passing candidate.
-4. F1-F5 and `k8s/README.md`, then the eval image decision, so Member 1 can write
-   `k8s/eval-job.yaml`.
-5. Re-running Parts A, B, C1 and E as cluster Jobs for the report.
+Member 2 delivered items 1-4 (docs/handover/HANDOVER-ragops-m2.md). Member 1 then:
+
+- wrote `k8s/eval-job.yaml` (suite and gate, fails when the gate fails) and
+  `k8s/coverage-job.yaml` (Part E, fails below 85 %), and ran both on a fresh minikube
+  (eval/results/cluster-m1/);
+- wrote D5 from trace `7087caa6dc4949aea29a80263a9e8fb2` (q13, a Part B answer) rather than
+  the suggested `61e8b56d...`, because D5 asks for an answer from Part B;
+- drafted docs/report/member1-sections.md (Parts A, B, C1, D5, E; Q4 a, b, d);
+- recorded the fetch.py re-download as WONTFIX (DECISIONS R17).
+
+## Member 1's review of Member 2's changes in Member 1's area
+
+Post-merge review of PRs #37-#40 (uniqueness, trace and guardrail hooks, cache scope).
+None of these is a deduction-ledger risk; each is a known limit with an upgrade path.
+
+1. `indexer/pipeline/verify.py`, `Duplicates.check`: the exact-duplicate test runs before
+   the "another version of the same doc_id is recency's case" skip. A new version whose
+   extracted text is identical to the old one is quarantined as a duplicate instead of
+   superseding it. WONTFIX: an unchanged republished document has nothing to supersede, and
+   the reason file names the original.
+2. `api/app/services/answer.py`: a question the retrieval rail flags (`check_question`) can
+   still be cached; only flagged evidence blocks the cache. A grounded answer to an
+   injection-style question (q19) is then served to near-identical questions. Low risk,
+   because the answer passed citation validation; making a flagged question skip the cache
+   like a follow-up is one condition in `safe`.
+3. `api/app/providers/cache/__init__.py`, `config_scope`: the scope has the collection,
+   model, top_k, floor, provider, temperature and guardrail action, but not `LLM_SEED` or a
+   prompt-template version. A prompt change without an index run would serve old answers.
+   Add a prompt-template hash to the scope if prompts change outside a release.
+4. `indexer/pipeline/verify.py`, `Duplicates.save`: `signatures.json` is rewritten in place,
+   like `catalog.json` (the single-writer WONTFIX in PR #33 applies to both).

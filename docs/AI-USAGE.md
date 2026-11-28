@@ -180,6 +180,16 @@
 - **Shaped / Wrote:** Member 2 task list from docs/handover/HANDOVER-ragops-m1.md: build the uniqueness check, exact and near (A1 swap); measure the near-duplicate threshold on the corpus and Batch B (A1); write one trace record per query to stdout and a volume (D1, F4); print the rebuilt prompt for a trace id (D2); add top-1 similarity and injection metrics and a windowed summary (D3); log guardrail actions into the trace and test them with b09 (D4); write config/gate.yaml, the ragops-gate ConfigMap and scripts/gate.py (C2); add the data lake and results PVCs and move the Jobs onto them (F1, F2); add the candidate Deployment, Service, NetworkPolicy and index Job (F3); release with a rolling update and reverse a bad one with rollout undo (F3, C3); measure resources with kubectl top (F5); write k8s/README.md (F).
 - **I changed:** asked the user before setting the repo-local git identity (CLAUDE.md §1.23), and kept k8s/eval-job.yaml for Member 1 (their swap task in the plan) while building the eval image and its NetworkPolicy for it. Rail default kept at "flag" so the poisoned-chunk test still exercises the A02 defence (R16).
 
+## 2026-11-28 · ragops/m1-cluster
+- **Tool:** Claude Code + `caveman`
+- **Shaped / Wrote:** the phase's stripped task list from Member 2's handover (docs/handover/HANDOVER-ragops-m2.md) and brief §F2, §D5, §E, §G: write k8s/eval-job.yaml (F2); write k8s/coverage-job.yaml (E2, E4); run baseline, minilm, k6 and coverage as cluster Jobs (B, C1, E); write D5 from a Part B trace (D5); draft Member 1's report sections and Q4 a, b, d (G); review Member 2's changes in Member 1's area; decide the fetch.py re-download (R17).
+- **I changed:** accepted as-is; D5 uses a Part B trace (q13) instead of the trace Member 2 suggested, because the brief asks for an answer from Part B.
+
+## 2026-11-28 · ragops/m1-cluster
+- **Tool:** Claude Code + `ponytail`
+- **Shaped / Wrote:** two forks: how the eval Job gets the candidate's settings (DECISIONS R18), and how to stop overlapping ingestion runs (a lock in Lake, rather than a Kubernetes-side mutex such as a Lease or a single-Job convention).
+- **I changed:** accepted as-is; the lock blocks rather than failing fast, so a hand-started Job waits for the CronJob's run instead of burning its backoffLimit.
+
 ## Task log
 
 - 2026-11-07 · feat/s2-corpus · Seeded DECISIONS.md, failure-log.md and the handover folder so Dev 1 work can record decisions (D2-P1 had not landed); chose the corpus in corpus/sources.yaml (§2).
@@ -275,3 +285,6 @@
 - 2026-11-28 · ragops/f-kubernetes · Cluster runs on a fresh minikube: first ingestion 803 chunks, unchanged re-run embedded 0, candidate collections, the suite as Jobs (baseline twice, k6, minilm), gate on the cluster numbers, gate Job Failed then Complete after a ConfigMap edit, Batch B through the ingestion Job (6 quarantined, as expected), traces, trace_show MATCH, summary, metrics, release, bad release and rollout undo with traces (RAGOps A, B, C, D, F).
 - 2026-11-28 · ragops/f-kubernetes · Four failures found on the cluster and fixed, each in docs/failure-log.md with a test where code changed: near-duplicate threshold 0.95 to 0.98 (measured); retrieval rail to redact on the cluster and no caching of answers on flagged evidence; cache entries scoped by configuration after a release served old answers; restartPolicy Never so failed ingestion attempts keep their logs; plus the embedding digest learned from /readyz (RAGOps A1, D1, D4, F3, F4).
 - 2026-11-28 · ragops/f-kubernetes · F5 resources from kubectl top during ingestion, eval and an 82-question burst (chroma request to 192Mi); k8s/README.md verified from an empty namespace; README commands for C2, C3, D, F; report draft for C2, D, F and Q4 c, e, f (docs/report/member2-sections.md); docs/handover/HANDOVER-ragops-m2.md with the eval image decision and the D5 trace id (RAGOps F, G).
+- 2026-11-28 · ragops/m1-cluster · Wrote k8s/eval-job.yaml (suite then gate, fails when the gate fails) and k8s/coverage-job.yaml, plus query_coverage.py --without-category; ran baseline (x2), minilm (gate FAIL), k6 (gate PASS) and coverage 68 % -> 88 % as Jobs on minikube (eval/results/cluster-m1/) (RAGOps B, C1, E, F2).
+- 2026-11-28 · ragops/m1-cluster · Fixed overlapping ingestion runs corrupting the data lake with Lake.lock(), found on the cluster; test in indexer/tests/test_lake.py; failure-log entries for it, CoreDNS and minikube memory (RAGOps A2, F2).
+- 2026-11-28 · ragops/m1-cluster · Drafted docs/report/member1-sections.md (Parts A, B, C1, D5, E; Q4 a, b, d), reviewed Member 2's changes in Member 1's area (handover), recorded R17 and R18 (RAGOps D5, G).
