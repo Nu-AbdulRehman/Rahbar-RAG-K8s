@@ -1,0 +1,16 @@
+$ python scripts/gate.py eval/results/cluster/20261128T105812Z-baseline-cluster.json eval/results/cluster/20261128T105323Z-k6-cluster.json --out eval/results/cluster/gate-k6.json
+release gate, config config/gate.yaml
+  baseline:  baseline-cluster (rahbar, nomic-embed-text, top_k 5, 20261128T105812Z)
+  candidate: k6-cluster (rahbar-k6, nomic-embed-text, top_k 6, 20261128T105323Z)
+
+metric                   rule                  baseline candidate  result  detail
+------------------------------------------------------------------------------------------------
+recall_at_5              max_drop 0.02           0.5625    0.5625  PASS    drop +0.0000 <= 0.0200
+faithfulness             min 0.64                0.7857    0.6667  PASS    0.6667 >= 0.64
+latency_p95_s            max 25                  3.2500    3.5130  PASS    3.513 <= 25
+latency_p50_s            max_ratio 1.5           1.6250    1.6940  PASS    1.694 / 1.625 = 1.042 <= 1.5
+abstention_correctness   not below baseline      1.0000    1.0000  PASS    1 >= baseline 1
+citation_validity        min 0.95                1.0000    1.0000  PASS    1 >= 0.95
+
+GATE PASS: release the candidate
+exit code: 0

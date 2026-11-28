@@ -1,0 +1,84 @@
+{
+  "decided_at": "2026-11-28T11:12:31Z",
+  "config": "config/gate.yaml",
+  "thresholds": {
+    "recall_at_5": {
+      "max_drop": 0.02
+    },
+    "faithfulness": {
+      "min": 0.64
+    },
+    "latency_p95_s": {
+      "max": 25
+    },
+    "latency_p50_s": {
+      "max_ratio": 1.5
+    },
+    "abstention_correctness": {
+      "not_below_baseline": true
+    },
+    "citation_validity": {
+      "min": 0.95
+    }
+  },
+  "baseline": "eval/results/cluster/20261128T105812Z-baseline-cluster.json",
+  "candidate": "eval/results/cluster/20261128T105323Z-k6-cluster.json",
+  "decision": "pass",
+  "failed": [],
+  "rules": [
+    {
+      "metric": "recall_at_5",
+      "rule": "max_drop",
+      "threshold": 0.02,
+      "baseline": 0.5625,
+      "candidate": 0.5625,
+      "passed": true,
+      "detail": "drop +0.0000 <= 0.0200"
+    },
+    {
+      "metric": "faithfulness",
+      "rule": "min",
+      "threshold": 0.64,
+      "baseline": 0.7857,
+      "candidate": 0.6667,
+      "passed": true,
+      "detail": "0.6667 >= 0.64"
+    },
+    {
+      "metric": "latency_p95_s",
+      "rule": "max",
+      "threshold": 25,
+      "baseline": 3.25,
+      "candidate": 3.513,
+      "passed": true,
+      "detail": "3.513 <= 25"
+    },
+    {
+      "metric": "latency_p50_s",
+      "rule": "max_ratio",
+      "threshold": 1.5,
+      "baseline": 1.625,
+      "candidate": 1.694,
+      "passed": true,
+      "detail": "1.694 / 1.625 = 1.042 <= 1.5"
+    },
+    {
+      "metric": "abstention_correctness",
+      "rule": "not_below_baseline",
+      "threshold": true,
+      "baseline": 1.0,
+      "candidate": 1.0,
+      "passed": true,
+      "detail": "1 >= baseline 1"
+    },
+    {
+      "metric": "citation_validity",
+      "rule": "min",
+      "threshold": 0.95,
+      "baseline": 1.0,
+      "candidate": 1.0,
+      "passed": true,
+      "detail": "1 >= 0.95"
+    }
+  ]
+}
