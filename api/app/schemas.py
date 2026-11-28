@@ -44,6 +44,12 @@ class Passage(BaseModel):
     section: str
     page: int | None = None
     score: float = Field(description="Similarity, higher is closer (1 - cosine distance).")
+    # What the indexer recorded on the chunk, for the trace record (RAGOps D1). Never
+    # sent to the user: AskResponse carries RetrievedRef, not Passage.
+    doc_id: str | None = None
+    doc_version: str | None = None
+    superseded: bool | None = None
+    content_hash: str | None = None
 
 
 class Citation(BaseModel):
