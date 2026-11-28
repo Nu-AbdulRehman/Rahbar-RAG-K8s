@@ -14,6 +14,10 @@ data:
   VERIFY_MIN_WORDS: "20"               # quality: fewer extracted words fails (Batch B b11)
   VERIFY_MAX_GARBLED: "0.30"           # quality: share of unreadable characters that fails
   VERIFY_EMBED_MODEL: "nomic-embed-text"   # uniqueness embeds with this for every collection (R14)
+  # Near duplicate at or above this document cosine. Planted b05 0.9997; closest different
+  # documents 0.9588 (prospectus vs 2023 rules); 0.95 quarantined the prospectus by mistake
+  # (eval/results/a/09-uniqueness-threshold.txt).
+  VERIFY_NEAR_DUPLICATE: "0.98"
   COVERAGE_THRESHOLD: "0.65"           # E2: sweep in eval/results (26/28 in-domain, 2/13 off-topic covered)
   COVERAGE_MIN_SHARE: "0.85"           # E4: the paper's 85 %; query_coverage.py exits 1 below it
   gate.yaml: |

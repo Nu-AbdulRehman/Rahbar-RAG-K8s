@@ -1,0 +1,43 @@
+# A1 uniqueness: the near-duplicate threshold, measured (nomic-embed-text, Ollama 0.40.19 ROCm)
+# lake = the 9 corpus documents (raw/ + archive/ + the quarantined prospectus) + Batch B in incoming/
+$ DATA_LAKE_DIR=<lake> python -m pipeline.ops similarities --top 25
+skipped b06-scholarship-policy-truncated.pdf: PdfminerException
+20 documents, 190 pairs, model nomic-embed-text, threshold VERIFY_NEAR_DUPLICATE=0.98
+  1.0000  b03-exam-conduct.md  ~  b04-exam-conduct-copy.md
+  1.0000  b01-library-rules.md  ~  b02-library-rules-copy.md
+  0.9997  b04-exam-conduct-copy.md  ~  b05-exam-conduct-revised-wording.md
+  0.9997  b03-exam-conduct.md  ~  b05-exam-conduct-revised-wording.md
+  0.9588  prospectus-2026-academic-rules-and-regulations.pdf  ~  undergraduate-academic-rules-aug-2023.pdf
+  0.9452  academic-rules-handbook-jun-2026.pdf  ~  student-handbook-jun-2026.pdf
+  0.9286  annual-report-2019-20.pdf  ~  annual-report-2023-24.pdf
+  0.9201  academic-rules-handbook-jun-2026.pdf  ~  undergraduate-academic-rules-aug-2023.pdf   (versions of one doc_id: skipped)
+  0.8934  academic-rules-handbook-jun-2026.pdf  ~  prospectus-2026-academic-rules-and-regulations.pdf
+  0.8897  grading-page.html  ~  prospectus-2026-academic-rules-and-regulations.pdf
+  0.8762  annual-report-2023-24.pdf  ~  student-handbook-jun-2026.pdf
+  0.8681  annual-report-2019-20.pdf  ~  student-handbook-jun-2026.pdf
+  0.8624  student-handbook-jun-2026.pdf  ~  undergraduate-academic-rules-aug-2023.pdf
+  0.8604  grading-page.html  ~  undergraduate-academic-rules-aug-2023.pdf
+  0.8578  b08-fee-structure-2027.md  ~  fee-structure-page.html   (versions of one doc_id: skipped)
+  0.8441  academic-rules-handbook-jun-2026.pdf  ~  grading-page.html
+  0.8342  academic-rules-handbook-jun-2026.pdf  ~  annual-report-2019-20.pdf
+  0.8335  academic-rules-handbook-jun-2026.pdf  ~  annual-report-2023-24.pdf
+  0.8330  prospectus-2026-academic-rules-and-regulations.pdf  ~  student-handbook-jun-2026.pdf
+  0.8189  b04-exam-conduct-copy.md  ~  undergraduate-academic-rules-aug-2023.pdf
+  0.8189  b03-exam-conduct.md  ~  undergraduate-academic-rules-aug-2023.pdf
+  0.8186  b05-exam-conduct-revised-wording.md  ~  undergraduate-academic-rules-aug-2023.pdf
+  0.8107  annual-report-2023-24.pdf  ~  undergraduate-academic-rules-aug-2023.pdf
+  0.8019  annual-report-2023-24.pdf  ~  prospectus-2026-academic-rules-and-regulations.pdf
+  0.7964  annual-report-2019-20.pdf  ~  undergraduate-academic-rules-aug-2023.pdf
+
+Choice: VERIFY_NEAR_DUPLICATE = 0.98.
+- planted duplicates: b04 and b02 are byte copies (1.0000, caught by the hash first), b05 is
+  b03 with five words changed under another doc_id: 0.9997.
+- highest pair of different documents: the prospectus (5-page summary) and the 2023 rules,
+  0.9588; then the 2026 handbook and the student handbook, 0.9452.
+- 0.98 sits in the gap (0.9588, 0.9997): 0.021 above the closest legitimate pair and 0.020
+  below the planted one.
+Rejected: 0.95, the first provisional value. On the first cluster run it quarantined the
+prospectus as a near duplicate of the 2023 rules (cosine 0.954), a false positive that
+removed 36 chunks from the index (kubectl logs job/indexer, 2026-11-28T10:29Z).
+Rejected: 0.90 and below: would also quarantine the student handbook, both annual reports
+and the prospectus/handbook pair.

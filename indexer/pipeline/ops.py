@@ -69,7 +69,10 @@ def similarities(settings: IndexerSettings, lake: Lake, top: int) -> int:
     from .lake import read_folder
     from .verify import similarity_matrix
 
-    entries = [(lake.path(e), e) for e in lake.current()]
+    # raw/ as it is on disk (the catalog may not have seen it yet), archived versions from
+    # the catalog, and a batch still waiting in incoming/
+    entries = [(lake.raw / e.file, e) for e in read_folder(lake.raw)]
+    entries += [(lake.path(e), e) for e in lake.catalog() if e.location == "archive"]
     entries += [(lake.incoming / e.file, e) for e in read_folder(lake.incoming)]
     docs, ids = {}, {}
     for path, entry in entries:
